@@ -1,0 +1,116 @@
+import { useState } from "react";
+import { Play, RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { MealSelector } from "./MealSelector";
+import { ExerciseSelector } from "./ExerciseSelector";
+import { SimulationResultDisplay } from "./SimulationResult";
+import { runSimulation } from "@/lib/simulation-engine";
+import type { MealInput, ExerciseInput, SimulationResult } from "@/types/simulation";
+
+interface WhatIfSimulatorProps {
+  currentGlucose: number;
+  trend: "rising" | "falling" | "stable";
+  predicted60min: number;
+}
+
+export function WhatIfSimulator({ currentGlucose, trend, predicted60min }: WhatIfSimulatorProps) {
+  const [meal, setMeal] = useState<MealInput | null>(null);
+  const [exercise, setExercise] = useState<ExerciseInput | null>(null);
+  const [result, setResult] = useState<SimulationResult | null>(null);
+
+  const hasInput = meal || exercise;
+
+  const handleSimulate = () => {
+    const simResult = runSimulation({
+      baseline: {
+        currentGlucose,
+        trend,
+        predicted60min
+      },
+      userActions: {
+        meal: meal || undefined,
+        exercise: exercise || undefined
+      }
+    });
+    setResult(simResult);
+  };
+
+  const handleReset = () => {
+    setMeal(null);
+    setExercise(null);
+    setResult(null);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Introduction */}
+      <div className="text-center py-4">
+        <h2 className="text-2xl font-semibold text-foreground mb-2">
+          What if...?
+        </h2>
+        <p className="text-lg text-muted-foreground max-w-md mx-auto">
+          Explore how eating or moving might affect your blood sugar. 
+          This is just to help you learn – not medical advice.
+        </p>
+      </div>
+
+      {!result ? (
+        <>
+          {/* Input selectors */}
+          <div className="space-y-4">
+            <MealSelector value={meal} onChange={setMeal} />
+            <ExerciseSelector value={exercise} onChange={setExercise} />
+          </div>
+
+          {/* Simulate button */}
+          <div className="flex justify-center pt-4">
+            <Button
+              size="lg"
+              onClick={handleSimulate}
+              disabled={!hasInput}
+              className="touch-target text-lg px-8 gap-3"
+            >
+              <Play className="w-5 h-5" />
+              See what might happen
+            </Button>
+          </div>
+
+          {!hasInput && (
+            <p className="text-center text-muted-foreground">
+              Choose at least one option above to explore
+            </p>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Results */}
+          <SimulationResultDisplay 
+            result={result} 
+            currentGlucose={currentGlucose} 
+          />
+
+          {/* Try again button */}
+          <div className="flex justify-center pt-4">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={handleReset}
+              className="touch-target text-lg px-8 gap-3"
+            >
+              <RotateCcw className="w-5 h-5" />
+              Try another scenario
+            </Button>
+          </div>
+        </>
+      )}
+
+      {/* Safety footer */}
+      <div className="text-center pt-6 border-t">
+        <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+          This is for learning only. Always follow your care team's guidance 
+          for medication and treatment decisions.
+        </p>
+      </div>
+    </div>
+  );
+}
