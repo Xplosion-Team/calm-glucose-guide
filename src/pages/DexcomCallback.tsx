@@ -28,10 +28,20 @@ const DexcomCallback = () => {
 
         const redirectUri = `${window.location.origin}/dexcom/callback`;
 
-        const { data, error } = await supabase.functions.invoke("dexcom-auth", {
-          body: { code, redirect_uri: redirectUri },
-          headers: { "Content-Type": "application/json" },
-        });
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dexcom-auth?action=callback`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            body: JSON.stringify({ code, redirect_uri: redirectUri }),
+          }
+        );
+        const data = await res.json();
+        const error = res.ok ? null : new Error(data.error || "Callback failed");
 
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
