@@ -1,4 +1,6 @@
-import { RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { RefreshCw, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Header } from "@/components/Header";
@@ -8,14 +10,31 @@ import { SuggestionCard } from "@/components/SuggestionCard";
 import { TimeInfo } from "@/components/TimeInfo";
 import { PredictionPreview } from "@/components/PredictionPreview";
 import { WhatIfSimulator } from "@/components/simulation/WhatIfSimulator";
+import { DexcomConnect } from "@/components/DexcomConnect";
 import { useGlucoseData } from "@/hooks/useGlucoseData";
 import { getGreeting } from "@/lib/glucose-interpreter";
 import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
+  const navigate = useNavigate();
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      if (!session) navigate("/auth");
+      setAuthChecked(true);
+    });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) navigate("/auth");
+      setAuthChecked(true);
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
   const { data, isLoading, refresh } = useGlucoseData();
   
-  if (isLoading || !data) {
+  if (!authChecked || isLoading || !data) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container max-w-lg mx-auto px-4 py-8">
@@ -56,8 +75,25 @@ const Index = () => {
           <Header greeting={greeting} />
         </div>
         
+        {/* Dexcom Connection & Sign Out */}
+        <div className="flex items-center justify-between mt-2 mb-4 animate-fade-in">
+          <DexcomConnect />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              navigate("/auth");
+            }}
+            className="gap-1 text-muted-foreground"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign out
+          </Button>
+        </div>
+        
         {/* Tabs */}
-        <Tabs defaultValue="now" className="mt-6">
+        <Tabs defaultValue="now" className="mt-4">
           <TabsList className="grid w-full grid-cols-2 h-14 text-lg">
             <TabsTrigger value="now" className="text-lg py-3">Right Now</TabsTrigger>
             <TabsTrigger value="whatif" className="text-lg py-3">What If...?</TabsTrigger>
