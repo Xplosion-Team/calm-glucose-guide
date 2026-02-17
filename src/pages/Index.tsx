@@ -32,7 +32,7 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const { data, isLoading, refresh } = useGlucoseData();
+  const { data, isLoading, refresh, isDexcom } = useGlucoseData();
   
   if (!authChecked || isLoading || !data) {
     return (
@@ -140,8 +140,11 @@ const Index = () => {
               )}
             </div>
             
-            {/* Refresh button */}
-            <div className="flex justify-center mt-8 animate-fade-in-delay-3">
+            {/* Data source & Refresh */}
+            <div className="flex flex-col items-center gap-2 mt-8 animate-fade-in-delay-3">
+              <span className={`text-xs font-medium px-3 py-1 rounded-full ${isDexcom ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                {isDexcom ? '● Live Dexcom data' : '● Demo data'}
+              </span>
               <Button
                 variant="outline"
                 onClick={refresh}
