@@ -58,8 +58,12 @@ export const DexcomConnect = () => {
   const handleDisconnect = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.from("dexcom_tokens").delete().neq("id", "");
-      if (error) throw error;
+      const { data: tokens } = await supabase.from("dexcom_tokens").select("id");
+      if (tokens && tokens.length > 0) {
+        const { error } = await supabase.from("dexcom_tokens").delete().eq("id", tokens[0].id);
+        if (error) throw error;
+      }
+      
       setIsConnected(false);
       toast({ title: "Dexcom disconnected" });
     } catch (err: any) {
