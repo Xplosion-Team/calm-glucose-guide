@@ -122,12 +122,13 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const endpoint = url.searchParams.get("endpoint") || "egvs";
 
-    // Default: last 24 hours
+    // Default: last 3 hours (Dexcom wants YYYY-MM-DDThh:mm:ss format, no timezone)
     const now = new Date();
+    const formatForDexcom = (d: Date) => d.toISOString().replace(/\.\d{3}Z$/, "");
     const startDate =
       url.searchParams.get("startDate") ||
-      new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-    const endDate = url.searchParams.get("endDate") || now.toISOString();
+      formatForDexcom(new Date(now.getTime() - 3 * 60 * 60 * 1000));
+    const endDate = url.searchParams.get("endDate") || formatForDexcom(now);
 
     // Fetch from Dexcom API
     const dexcomUrl = `${DEXCOM_BASE_URL}/v3/users/self/${endpoint}?startDate=${startDate}&endDate=${endDate}`;
