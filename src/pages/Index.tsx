@@ -9,7 +9,7 @@ import { MessageCard } from "@/components/MessageCard";
 import { SuggestionCard } from "@/components/SuggestionCard";
 import { TimeInfo } from "@/components/TimeInfo";
 import { PredictionPreview } from "@/components/PredictionPreview";
-import { WhatIfSimulator } from "@/components/simulation/WhatIfSimulator";
+import { DigitalTwinDashboard } from "@/components/twin/DigitalTwinDashboard";
 import { DexcomConnect } from "@/components/DexcomConnect";
 import { useGlucoseData } from "@/hooks/useGlucoseData";
 import { getGreeting } from "@/lib/glucose-interpreter";
@@ -96,7 +96,7 @@ const Index = () => {
         <Tabs defaultValue="now" className="mt-4">
           <TabsList className="grid w-full grid-cols-2 h-14 text-lg">
             <TabsTrigger value="now" className="text-lg py-3">Right Now</TabsTrigger>
-            <TabsTrigger value="whatif" className="text-lg py-3">What If...?</TabsTrigger>
+            <TabsTrigger value="whatif" className="text-lg py-3">Digital Twin</TabsTrigger>
           </TabsList>
           
           {/* Current Status Tab */}
@@ -158,11 +158,7 @@ const Index = () => {
           
           {/* What-If Simulator Tab */}
           <TabsContent value="whatif" className="mt-6">
-            <WhatIfSimulator
-              currentGlucose={currentGlucose}
-              trend={trend}
-              predicted60min={predictedGlucose60min}
-            />
+            <DigitalTwinDashboard currentGlucose={currentGlucose} />
           </TabsContent>
         </Tabs>
         
