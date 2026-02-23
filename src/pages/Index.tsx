@@ -1,24 +1,26 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { RefreshCw, LogOut } from "lucide-react";
+import { RefreshCw, LogOut, Activity, HelpCircle, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Header } from "@/components/Header";
 import { GlucoseDisplay } from "@/components/GlucoseDisplay";
 import { MessageCard } from "@/components/MessageCard";
 import { SuggestionCard } from "@/components/SuggestionCard";
 import { TimeInfo } from "@/components/TimeInfo";
 import { PredictionPreview } from "@/components/PredictionPreview";
+import { WhatIfSimulator } from "@/components/simulation/WhatIfSimulator";
 import { DigitalTwinDashboard } from "@/components/twin/DigitalTwinDashboard";
 import { DexcomConnect } from "@/components/DexcomConnect";
 import { useGlucoseData } from "@/hooks/useGlucoseData";
 import { getGreeting } from "@/lib/glucose-interpreter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 const Index = () => {
   const navigate = useNavigate();
   const [authChecked, setAuthChecked] = useState(false);
+  const [activeTab, setActiveTab] = useState<"now" | "whatif" | "twin">("now");
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
@@ -62,13 +64,18 @@ const Index = () => {
   
   const greeting = getGreeting(userProfile.name);
   
-  // Determine trend for simulation
   const trend: "rising" | "falling" | "stable" = 
     currentGlucose > data.previousGlucose + 5 ? "rising" :
     currentGlucose < data.previousGlucose - 5 ? "falling" : "stable";
+
+  const tabs = [
+    { id: "now" as const, label: "Now", icon: Activity },
+    { id: "whatif" as const, label: "What If", icon: HelpCircle },
+    { id: "twin" as const, label: "Twin", icon: Cpu },
+  ];
   
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       <div className="container max-w-lg mx-auto px-4 py-8">
         {/* Header */}
         <div className="animate-fade-in">
@@ -92,75 +99,67 @@ const Index = () => {
           </Button>
         </div>
         
-        {/* Tabs */}
-        <Tabs defaultValue="now" className="mt-4">
-          <TabsList className="grid w-full grid-cols-2 h-14 text-lg">
-            <TabsTrigger value="now" className="text-lg py-3">Right Now</TabsTrigger>
-            <TabsTrigger value="whatif" className="text-lg py-3">Digital Twin</TabsTrigger>
-          </TabsList>
-          
-          {/* Current Status Tab */}
-          <TabsContent value="now" className="mt-6">
-            {/* Main glucose display */}
-            <div className="flex flex-col items-center py-8 animate-fade-in-delay-1">
-              <GlucoseDisplay
-                value={currentGlucose}
-                state={interpretation.state}
-                urgency={interpretation.urgency}
-              />
-              
-              {/* Predictions */}
-              <div className="w-full mt-6">
-                <PredictionPreview
-                  current={currentGlucose}
-                  predicted30={predictedGlucose30min}
-                  predicted60={predictedGlucose60min}
+        {/* Tab Content */}
+        <div className="mt-4">
+          {activeTab === "now" && (
+            <>
+              <div className="flex flex-col items-center py-8 animate-fade-in-delay-1">
+                <GlucoseDisplay
+                  value={currentGlucose}
+                  state={interpretation.state}
+                  urgency={interpretation.urgency}
                 />
-              </div>
-              
-              {/* Time info */}
-              <div className="mt-4">
-                <TimeInfo
-                  timestamp={timestamp}
-                  recentMeal={recentMeal}
-                  recentActivity={recentActivity}
-                />
-              </div>
-            </div>
-            
-            {/* Message card */}
-            <div className="space-y-4 animate-fade-in-delay-2">
-              <MessageCard message={interpretation.message} />
-              
-              {/* Suggestion card (only if there's a suggestion) */}
-              {interpretation.suggestion && (
-                <div className="animate-fade-in-delay-3">
-                  <SuggestionCard suggestion={interpretation.suggestion} />
+                <div className="w-full mt-6">
+                  <PredictionPreview
+                    current={currentGlucose}
+                    predicted30={predictedGlucose30min}
+                    predicted60={predictedGlucose60min}
+                  />
                 </div>
-              )}
-            </div>
-            
-            {/* Data source & Refresh */}
-            <div className="flex flex-col items-center gap-2 mt-8 animate-fade-in-delay-3">
-              <span className={`text-xs font-medium px-3 py-1 rounded-full ${isDexcom ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                {isDexcom ? '● Live Dexcom data' : '● Demo data'}
-              </span>
-              <Button
-                variant="outline"
-                onClick={refresh}
-                className="touch-target gap-2"
-              >
-                <RefreshCw className="w-5 h-5" />
-                Check again
-              </Button>
-            </div>
-          </TabsContent>
-          
-          {/* What-If Simulator Tab */}
-          <TabsContent value="whatif" className="mt-6">
+                <div className="mt-4">
+                  <TimeInfo
+                    timestamp={timestamp}
+                    recentMeal={recentMeal}
+                    recentActivity={recentActivity}
+                  />
+                </div>
+              </div>
+              <div className="space-y-4 animate-fade-in-delay-2">
+                <MessageCard message={interpretation.message} />
+                {interpretation.suggestion && (
+                  <div className="animate-fade-in-delay-3">
+                    <SuggestionCard suggestion={interpretation.suggestion} />
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col items-center gap-2 mt-8 animate-fade-in-delay-3">
+                <span className={`text-xs font-medium px-3 py-1 rounded-full ${isDexcom ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                  {isDexcom ? '● Live Dexcom data' : '● Demo data'}
+                </span>
+                <Button
+                  variant="outline"
+                  onClick={refresh}
+                  className="touch-target gap-2"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                  Check again
+                </Button>
+              </div>
+            </>
+          )}
+
+          {activeTab === "whatif" && (
+            <WhatIfSimulator
+              currentGlucose={currentGlucose}
+              trend={trend}
+              predicted60min={predictedGlucose60min}
+            />
+          )}
+
+          {activeTab === "twin" && (
             <DigitalTwinDashboard currentGlucose={currentGlucose} />
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
         
         {/* Safety footer */}
         <footer className="mt-12 text-center text-sm text-muted-foreground animate-fade-in-delay-3">
@@ -170,6 +169,27 @@ const Index = () => {
           </p>
         </footer>
       </div>
+
+      {/* Bottom Tab Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t z-50">
+        <div className="container max-w-lg mx-auto flex">
+          {tabs.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={cn(
+                "flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors",
+                activeTab === id
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Icon className={cn("w-5 h-5", activeTab === id && "stroke-[2.5]")} />
+              {label}
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
 };
