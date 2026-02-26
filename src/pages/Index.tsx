@@ -11,7 +11,10 @@ import { PredictionPreview } from "@/components/PredictionPreview";
 import { WhatIfSimulator } from "@/components/simulation/WhatIfSimulator";
 import { DigitalTwinDashboard } from "@/components/twin/DigitalTwinDashboard";
 import { DexcomConnect } from "@/components/DexcomConnect";
+import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
+import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
 import { useGlucoseData } from "@/hooks/useGlucoseData";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import { getGreeting } from "@/lib/glucose-interpreter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +38,16 @@ const Index = () => {
   }, [navigate]);
 
   const { data, isLoading, refresh, isDexcom } = useGlucoseData();
+  const {
+    tourRunning, checklist, showChecklist,
+    completeItem, finishTour, startTour, resetOnboarding,
+  } = useOnboarding();
+
+  // Track checklist progress based on tab visits
+  useEffect(() => {
+    if (activeTab === "whatif") completeItem("try_whatif");
+    if (activeTab === "twin") completeItem("explore_twin");
+  }, [activeTab, completeItem]);
   
   if (!authChecked || isLoading || !data) {
     return (
@@ -76,14 +89,31 @@ const Index = () => {
   
   return (
     <div className="min-h-screen bg-background pb-20">
+      {/* Product Tour */}
+      <OnboardingTour
+        run={tourRunning}
+        onFinish={finishTour}
+        activeTab={activeTab}
+        onChangeTab={setActiveTab}
+      />
+
+      {/* Onboarding Checklist */}
+      {showChecklist && (
+        <OnboardingChecklist
+          items={checklist}
+          onStartTour={startTour}
+          onResetChecklist={resetOnboarding}
+        />
+      )}
+
       <div className="container max-w-lg mx-auto px-4 py-8">
         {/* Header */}
-        <div className="animate-fade-in">
+        <div className="animate-fade-in" data-tour="header">
           <Header greeting={greeting} />
         </div>
         
         {/* Dexcom Connection & Sign Out */}
-        <div className="flex items-center justify-between mt-2 mb-4 animate-fade-in">
+        <div className="flex items-center justify-between mt-2 mb-4 animate-fade-in" data-tour="dexcom">
           <DexcomConnect />
           <Button
             variant="ghost"
@@ -103,13 +133,13 @@ const Index = () => {
         <div className="mt-4">
           {activeTab === "now" && (
             <>
-              <div className="flex flex-col items-center py-8 animate-fade-in-delay-1">
+              <div className="flex flex-col items-center py-8 animate-fade-in-delay-1" data-tour="glucose-display">
                 <GlucoseDisplay
                   value={currentGlucose}
                   state={interpretation.state}
                   urgency={interpretation.urgency}
                 />
-                <div className="w-full mt-6">
+                <div className="w-full mt-6" data-tour="predictions">
                   <PredictionPreview
                     current={currentGlucose}
                     predicted30={predictedGlucose30min}
@@ -124,7 +154,7 @@ const Index = () => {
                   />
                 </div>
               </div>
-              <div className="space-y-4 animate-fade-in-delay-2">
+              <div className="space-y-4 animate-fade-in-delay-2" data-tour="message-card">
                 <MessageCard message={interpretation.message} />
                 {interpretation.suggestion && (
                   <div className="animate-fade-in-delay-3">
@@ -176,6 +206,7 @@ const Index = () => {
           {tabs.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
+              data-tour={`tab-${id}`}
               onClick={() => setActiveTab(id)}
               className={cn(
                 "flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors",
