@@ -29,19 +29,21 @@ Deno.serve(async (req) => {
 
   const anonClient = createClient(
     SUPABASE_URL,
-    Deno.env.get("SUPABASE_ANON_KEY")!
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: authHeader } } }
   );
-  const {
-    data: { user },
-    error: userError,
-  } = await anonClient.auth.getUser(authHeader.replace("Bearer ", ""));
 
-  if (userError || !user) {
+  const token = authHeader.replace("Bearer ", "");
+  const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+
+  if (claimsError || !claimsData?.claims) {
     return new Response(JSON.stringify({ error: "Invalid authentication" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
+  const user = { id: claimsData.claims.sub as string };
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
