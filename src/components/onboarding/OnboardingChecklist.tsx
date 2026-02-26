@@ -49,11 +49,16 @@ export function OnboardingChecklist({ items, onStartTour, onResetChecklist }: On
             {completed}/{total}
           </span>
         </div>
-        {expanded ? (
-          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-        ) : (
-          <ChevronUp className="w-4 h-4 text-muted-foreground" />
-        )}
+        <div className="flex items-center gap-1 text-muted-foreground">
+          <span className="text-[10px] sm:text-xs">
+            {expanded ? "Tap to hide" : "Tap to show"}
+          </span>
+          {expanded ? (
+            <ChevronDown className="w-4 h-4" />
+          ) : (
+            <ChevronUp className="w-4 h-4" />
+          )}
+        </div>
       </button>
 
       {/* Progress bar */}
