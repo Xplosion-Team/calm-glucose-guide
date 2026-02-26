@@ -97,8 +97,8 @@ const Index = () => {
         onChangeTab={setActiveTab}
       />
 
-      {/* Onboarding Checklist */}
-      {showChecklist && (
+      {/* Onboarding Checklist — hidden while tour is active */}
+      {showChecklist && !tourRunning && (
         <OnboardingChecklist
           items={checklist}
           onStartTour={startTour}
