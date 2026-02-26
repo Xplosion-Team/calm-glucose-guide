@@ -18,7 +18,8 @@ export function WhatIfSimulator({ currentGlucose, trend, predicted60min }: WhatI
   const [exercise, setExercise] = useState<ExerciseInput | null>(null);
   const [result, setResult] = useState<SimulationResult | null>(null);
 
-  const hasInput = meal || exercise;
+  // "Resting" with 0 duration is effectively no action
+  const hasInput = meal || (exercise && !(exercise.type === "resting" && exercise.durationMinutes === 0));
 
   const handleSimulate = () => {
     const simResult = runSimulation({
