@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CheckCircle2, Circle, ChevronDown, ChevronUp, Sparkles, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface ChecklistItem {
   id: string;
@@ -17,7 +18,8 @@ interface OnboardingChecklistProps {
 }
 
 export function OnboardingChecklist({ items, onStartTour, onResetChecklist }: OnboardingChecklistProps) {
-  const [expanded, setExpanded] = useState(true);
+  const isMobile = useIsMobile();
+  const [expanded, setExpanded] = useState(!isMobile);
 
   const completed = items.filter((i) => i.completed).length;
   const total = items.length;
@@ -25,15 +27,22 @@ export function OnboardingChecklist({ items, onStartTour, onResetChecklist }: On
   const progressPercent = Math.round((completed / total) * 100);
 
   return (
-    <div className="fixed bottom-20 right-4 z-40 w-80 rounded-2xl border bg-card shadow-lg overflow-hidden animate-fade-in">
+    <div
+      className={cn(
+        "fixed z-40 rounded-2xl border bg-card shadow-lg overflow-hidden animate-fade-in",
+        isMobile
+          ? "bottom-16 left-2 right-2 w-auto max-h-[70vh] overflow-y-auto"
+          : "bottom-20 right-4 w-80"
+      )}
+    >
       {/* Header */}
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between p-4 hover:bg-secondary/50 transition-colors"
+        className="w-full flex items-center justify-between p-3 sm:p-4 hover:bg-secondary/50 transition-colors"
       >
-        <div className="flex items-center gap-2.5">
-          <Sparkles className="w-5 h-5 text-primary" />
-          <span className="font-semibold text-foreground text-sm">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+          <span className="font-semibold text-foreground text-xs sm:text-sm">
             Getting Started
           </span>
           <span className="text-xs text-muted-foreground">
@@ -48,7 +57,7 @@ export function OnboardingChecklist({ items, onStartTour, onResetChecklist }: On
       </button>
 
       {/* Progress bar */}
-      <div className="px-4 pb-1">
+      <div className="px-3 sm:px-4 pb-1">
         <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
           <div
             className="h-full rounded-full bg-primary transition-all duration-500"
@@ -59,38 +68,40 @@ export function OnboardingChecklist({ items, onStartTour, onResetChecklist }: On
 
       {/* Content */}
       {expanded && (
-        <div className="px-4 pb-4 pt-2 space-y-2.5">
+        <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-2 space-y-2">
           {items.map((item) => (
             <div
               key={item.id}
               className={cn(
-                "flex items-start gap-3 p-2.5 rounded-xl transition-colors",
+                "flex items-start gap-2.5 p-2 sm:p-2.5 rounded-xl transition-colors",
                 item.completed ? "bg-secondary/40" : "bg-background"
               )}
             >
               {item.completed ? (
-                <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-primary mt-0.5 shrink-0" />
               ) : (
-                <Circle className="w-5 h-5 text-muted-foreground mt-0.5 shrink-0" />
+                <Circle className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground mt-0.5 shrink-0" />
               )}
-              <div>
+              <div className="min-w-0">
                 <p
                   className={cn(
-                    "text-sm font-medium",
+                    "text-xs sm:text-sm font-medium",
                     item.completed ? "text-muted-foreground line-through" : "text-foreground"
                   )}
                 >
                   {item.label}
                 </p>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {item.description}
-                </p>
+                {!isMobile && (
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {item.description}
+                  </p>
+                )}
               </div>
             </div>
           ))}
 
           {/* Actions */}
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-1 sm:pt-2">
             <Button
               variant="outline"
               size="sm"

@@ -76,18 +76,19 @@ describe("OnboardingChecklist", () => {
     expect(screen.getByText("View your glucose reading")).toBeInTheDocument();
   });
 
-  it("has fixed positioning suitable for mobile overlay", () => {
+  it("has fixed positioning with desktop classes (matchMedia defaults to non-mobile)", () => {
     const { container } = render(
       <OnboardingChecklist items={MOCK_ITEMS} onStartTour={onStartTour} onResetChecklist={onResetChecklist} />
     );
     const root = container.firstElementChild as HTMLElement;
     expect(root.className).toContain("fixed");
+    // Desktop layout (matchMedia returns matches:false by default in test setup)
     expect(root.className).toContain("bottom-20");
     expect(root.className).toContain("right-4");
     expect(root.className).toContain("w-80");
   });
 
-  it("renders descriptions for each item (touch-friendly readability)", () => {
+  it("renders descriptions on desktop (non-mobile)", () => {
     render(<OnboardingChecklist items={MOCK_ITEMS} onStartTour={onStartTour} onResetChecklist={onResetChecklist} />);
     MOCK_ITEMS.forEach((item) => {
       expect(screen.getByText(item.description)).toBeInTheDocument();
