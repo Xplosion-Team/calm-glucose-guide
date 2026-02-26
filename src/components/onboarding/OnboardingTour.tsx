@@ -108,12 +108,13 @@ export function OnboardingTour({ run, onFinish, activeTab, onChangeTab }: Onboar
           textColor: "hsl(150, 20%, 18%)",
           overlayColor: "rgba(0, 0, 0, 0.45)",
           zIndex: 1000,
-          width: 340,
+          width: Math.min(340, window.innerWidth - 32),
         },
         tooltip: {
           borderRadius: "1rem",
-          padding: "1.25rem",
-          fontSize: "1rem",
+          padding: "1rem",
+          fontSize: "0.95rem",
+          maxWidth: "calc(100vw - 2rem)",
         },
         tooltipTitle: {
           fontSize: "1.15rem",
