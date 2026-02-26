@@ -14,7 +14,7 @@ export function Header({ greeting }: HeaderProps) {
         </div>
         <div>
           <p className="text-sm font-medium text-muted-foreground">Greens Health</p>
-          <h1 className="text-2xl font-bold text-foreground">{greeting}</h1>
+          <h1 className="text-2xl font-bold text-foreground truncate max-w-[calc(100vw-120px)]">{greeting}</h1>
         </div>
       </div>
       
