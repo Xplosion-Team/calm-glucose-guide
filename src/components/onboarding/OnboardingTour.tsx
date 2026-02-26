@@ -50,7 +50,7 @@ const NOW_STEPS: Step[] = [
     target: '[data-tour="tab-twin"]',
     content: "Your Digital Twin — an AI model that learns your patterns and answers your glucose questions.",
     title: "🧠 Digital Twin Tab",
-    placement: "top",
+    placement: "top-end",
   },
 ];
 
