@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Play, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MealSelector } from "./MealSelector";
@@ -17,6 +17,7 @@ export function WhatIfSimulator({ currentGlucose, trend, predicted60min }: WhatI
   const [meal, setMeal] = useState<MealInput | null>(null);
   const [exercise, setExercise] = useState<ExerciseInput | null>(null);
   const [result, setResult] = useState<SimulationResult | null>(null);
+  const topRef = useRef<HTMLDivElement>(null);
 
   // "Resting" with 0 duration is effectively no action
   const hasInput = meal || (exercise && !(exercise.type === "resting" && exercise.durationMinutes === 0));
@@ -34,6 +35,7 @@ export function WhatIfSimulator({ currentGlucose, trend, predicted60min }: WhatI
       }
     });
     setResult(simResult);
+    setTimeout(() => topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
   };
 
   const handleReset = () => {
@@ -43,7 +45,7 @@ export function WhatIfSimulator({ currentGlucose, trend, predicted60min }: WhatI
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" ref={topRef}>
       {/* Introduction */}
       <div className="text-center py-4">
         <h2 className="text-2xl font-semibold text-foreground mb-2">
