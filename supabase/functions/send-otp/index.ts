@@ -47,11 +47,11 @@ Deno.serve(async (req) => {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
 
     // Delete old OTPs for this phone
-    await supabase.from("phone_otps").delete().eq("phone", phone);
+    await supabase.from("phone_otps").delete().eq("phone", normalizedPhone);
 
     // Store new OTP
     const { error: dbError } = await supabase.from("phone_otps").insert({
-      phone,
+      phone: normalizedPhone,
       code,
       expires_at: expiresAt,
     });
