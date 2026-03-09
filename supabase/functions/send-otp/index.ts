@@ -14,7 +14,13 @@ Deno.serve(async (req) => {
   try {
     const { phone } = await req.json();
 
-    if (!phone || typeof phone !== "string" || phone.length < 10) {
+    // Normalize phone to E.164 format
+    let normalizedPhone = phone?.toString().replace(/[\s\-\(\)]/g, "") || "";
+    if (normalizedPhone && !normalizedPhone.startsWith("+")) {
+      normalizedPhone = "+" + normalizedPhone;
+    }
+
+    if (!normalizedPhone || normalizedPhone.length < 10) {
       return new Response(
         JSON.stringify({ error: "Valid phone number is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -41,11 +47,11 @@ Deno.serve(async (req) => {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
 
     // Delete old OTPs for this phone
-    await supabase.from("phone_otps").delete().eq("phone", phone);
+    await supabase.from("phone_otps").delete().eq("phone", normalizedPhone);
 
     // Store new OTP
     const { error: dbError } = await supabase.from("phone_otps").insert({
-      phone,
+      phone: normalizedPhone,
       code,
       expires_at: expiresAt,
     });
@@ -67,7 +73,7 @@ Deno.serve(async (req) => {
         Authorization: `Basic ${btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`)}`,
       },
       body: new URLSearchParams({
-        To: phone,
+        To: normalizedPhone,
         From: TWILIO_PHONE_NUMBER,
         Body: `Your Greens Health verification code is: ${code}. It expires in 10 minutes.`,
       }),
