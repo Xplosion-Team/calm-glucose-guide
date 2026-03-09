@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
         Authorization: `Basic ${btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`)}`,
       },
       body: new URLSearchParams({
-        To: phone,
+        To: normalizedPhone,
         From: TWILIO_PHONE_NUMBER,
         Body: `Your Greens Health verification code is: ${code}. It expires in 10 minutes.`,
       }),
