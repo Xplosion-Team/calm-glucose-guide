@@ -14,7 +14,13 @@ Deno.serve(async (req) => {
   try {
     const { phone } = await req.json();
 
-    if (!phone || typeof phone !== "string" || phone.length < 10) {
+    // Normalize phone to E.164 format
+    let normalizedPhone = phone?.toString().replace(/[\s\-\(\)]/g, "") || "";
+    if (normalizedPhone && !normalizedPhone.startsWith("+")) {
+      normalizedPhone = "+" + normalizedPhone;
+    }
+
+    if (!normalizedPhone || normalizedPhone.length < 10) {
       return new Response(
         JSON.stringify({ error: "Valid phone number is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
