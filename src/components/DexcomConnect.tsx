@@ -16,7 +16,7 @@ export const DexcomConnect = () => {
   const checkConnection = async () => {
     try {
       const { data } = await supabase
-        .from("dexcom_tokens")
+        .from("dexcom_connection_status" as any)
         .select("id, expires_at")
         .maybeSingle();
       setIsConnected(!!data);
