@@ -100,7 +100,33 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      dexcom_connection_status: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string | null
+          scope: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          scope?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          scope?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
