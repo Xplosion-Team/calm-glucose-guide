@@ -16,7 +16,7 @@ export const DexcomConnect = () => {
   const checkConnection = async () => {
     try {
       const { data } = await supabase
-        .from("dexcom_connection_status" as any)
+        .from("dexcom_connection_status")
         .select("id, expires_at")
         .maybeSingle();
       setIsConnected(!!data);
@@ -58,12 +58,25 @@ export const DexcomConnect = () => {
   const handleDisconnect = async () => {
     setLoading(true);
     try {
-      const { data: tokens } = await supabase.from("dexcom_tokens").select("id");
-      if (tokens && tokens.length > 0) {
-        const { error } = await supabase.from("dexcom_tokens").delete().eq("id", tokens[0].id);
-        if (error) throw error;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dexcom-disconnect`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+        }
+      );
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to disconnect");
       }
-      
+
       setIsConnected(false);
       toast({ title: "Dexcom disconnected" });
     } catch (err: any) {

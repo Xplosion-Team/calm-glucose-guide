@@ -140,7 +140,7 @@ export function useGlucoseData() {
     
     // Check if Dexcom is connected
     const { data: tokenData } = await supabase
-      .from("dexcom_tokens")
+      .from("dexcom_connection_status")
       .select("id")
       .maybeSingle();
 
