@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import Joyride, { Step, CallBackProps, STATUS, EVENTS } from "react-joyride";
 
+type TourTabId = "now" | "whatif" | "twin" | "journey" | "circles" | "games" | "learn";
+
 interface OnboardingTourProps {
   run: boolean;
   onFinish: () => void;
-  activeTab: "now" | "whatif" | "twin";
-  onChangeTab: (tab: "now" | "whatif" | "twin") => void;
+  activeTab: TourTabId;
+  onChangeTab: (tab: TourTabId) => void;
 }
 
 const NOW_STEPS: Step[] = [
