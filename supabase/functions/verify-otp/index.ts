@@ -52,18 +52,20 @@ Deno.serve(async (req) => {
     const phoneEmail = `${phone.replace(/\D/g, "")}@phone.greenshealth.local`;
     const tempPassword = crypto.randomUUID();
 
-    // Look up existing user by deterministic email (scales beyond 50 users,
-    // unlike listUsers() which is paginated and would silently miss accounts).
+    // Look up existing user by deterministic email. The admin SDK doesn't
+    // expose a direct email lookup, so we query auth.users via the service
+    // role (scales beyond listUsers() pagination limits).
     let existingUser: any = null;
-    try {
-      const { data: byEmail } = await supabase.auth.admin.getUserByEmail?.(phoneEmail) ?? { data: null };
-      existingUser = byEmail?.user ?? null;
-    } catch {
-      // getUserByEmail isn't available in all SDK versions; fall back to first page lookup.
-      const { data: usersPage } = await supabase.auth.admin.listUsers({ perPage: 200 });
-      existingUser = usersPage?.users?.find(
-        (u) => u.phone === phone || u.email === phoneEmail
-      ) ?? null;
+    {
+      const { data: userRow } = await supabase
+        .schema("auth")
+        .from("users")
+        .select("id, email, phone")
+        .eq("email", phoneEmail)
+        .maybeSingle();
+      if (userRow) {
+        existingUser = userRow;
+      }
     }
 
     let session;
