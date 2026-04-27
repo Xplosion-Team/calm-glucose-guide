@@ -171,7 +171,7 @@ const Index = () => {
         />
       )}
 
-      <div className="container max-w-lg mx-auto px-4 py-6 sm:py-8">
+      <div className="container max-w-lg mx-auto px-4 py-6 sm:py-8" data-readable-page>
         {/* Header */}
         <div className="animate-fade-in" data-tour="header">
           <Header greeting={greeting} />
