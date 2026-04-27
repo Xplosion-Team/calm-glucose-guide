@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useMemo, useState, useRef } from "react";
+import { useScreenContext } from "@/hooks/useScreenContext";
 import { Play, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MealSelector } from "./MealSelector";
