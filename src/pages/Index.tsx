@@ -9,6 +9,8 @@ import {
   Users,
   Gamepad2,
   BookOpen,
+  Compass,
+  Map,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
@@ -28,22 +30,72 @@ import { useOnboarding } from "@/hooks/useOnboarding";
 import { getGreeting } from "@/lib/glucose-interpreter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
-const TABS: { id: TabId; label: string; icon: typeof Activity }[] = [
+type JourneySub = "now" | "whatif" | "progress";
+type ExploreSub = "circles" | "games" | "learn";
+
+const TOP_TABS: { id: TabId; label: string; icon: typeof Activity }[] = [
+  { id: "journey", label: "Journey", icon: Map },
+  { id: "twin", label: "Twin", icon: Cpu },
+  { id: "explore", label: "Explore", icon: Compass },
+];
+
+const JOURNEY_SUBS: { id: JourneySub; label: string; icon: typeof Activity }[] = [
   { id: "now", label: "Now", icon: Activity },
   { id: "whatif", label: "What If", icon: HelpCircle },
-  { id: "twin", label: "Twin", icon: Cpu },
-  { id: "journey", label: "Journey", icon: TrendingUp },
+  { id: "progress", label: "Progress", icon: TrendingUp },
+];
+
+const EXPLORE_SUBS: { id: ExploreSub; label: string; icon: typeof Users }[] = [
   { id: "circles", label: "Circles", icon: Users },
   { id: "games", label: "Games", icon: Gamepad2 },
   { id: "learn", label: "Learn", icon: BookOpen },
 ];
 
+interface SubNavProps<T extends string> {
+  items: { id: T; label: string; icon: typeof Activity }[];
+  active: T;
+  onChange: (id: T) => void;
+}
+
+function SubNav<T extends string>({ items, active, onChange }: SubNavProps<T>) {
+  return (
+    <div
+      role="tablist"
+      className="flex gap-1 p-1 rounded-2xl bg-secondary/50 mb-4"
+    >
+      {items.map(({ id, label, icon: Icon }) => {
+        const isActive = active === id;
+        return (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onChange(id)}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 text-sm font-medium rounded-xl transition-colors",
+              isActive
+                ? "bg-background text-primary shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Icon className="w-4 h-4" aria-hidden="true" />
+            <span className="whitespace-nowrap">{label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 const Index = () => {
   const navigate = useNavigate();
   const [authChecked, setAuthChecked] = useState(false);
   const [hasSession, setHasSession] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabId>("now");
+  const [activeTab, setActiveTab] = useState<TabId>("journey");
+  const [journeySub, setJourneySub] = useState<JourneySub>("now");
+  const [exploreSub, setExploreSub] = useState<ExploreSub>("circles");
 
   // Auth gate
   useEffect(() => {
@@ -73,12 +125,10 @@ const Index = () => {
 
   // Track checklist progress based on tab visits
   useEffect(() => {
-    if (activeTab === "whatif") completeItem("try_whatif");
+    if (activeTab === "journey" && journeySub === "whatif") completeItem("try_whatif");
     if (activeTab === "twin") completeItem("explore_twin");
-  }, [activeTab, completeItem]);
+  }, [activeTab, journeySub, completeItem]);
 
-  // Don't render the dashboard skeleton until auth is confirmed AND we have a session.
-  // Otherwise we briefly render placeholder UI for unauthenticated users mid-redirect.
   if (!authChecked || !hasSession || isLoading || !data) {
     return (
       <div className="min-h-screen bg-background">
@@ -95,7 +145,6 @@ const Index = () => {
   }
 
   const { currentGlucose, predictedGlucose60min, userProfile } = data;
-
   const greeting = getGreeting(userProfile.name);
 
   const trend: "rising" | "falling" | "stable" =
@@ -107,7 +156,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Product Tour */}
       <OnboardingTour
         run={tourRunning}
         onFinish={finishTour}
@@ -115,7 +163,6 @@ const Index = () => {
         onChangeTab={setActiveTab}
       />
 
-      {/* Onboarding Checklist — hidden while tour is active */}
       {showChecklist && !tourRunning && (
         <OnboardingChecklist
           items={checklist}
@@ -152,31 +199,37 @@ const Index = () => {
 
         {/* Tab Content */}
         <div className="mt-4">
-          {activeTab === "now" && (
-            <NowTab data={data} isDexcom={isDexcom} onRefresh={refresh} />
-          )}
-
-          {activeTab === "whatif" && (
-            <WhatIfSimulator
-              currentGlucose={currentGlucose}
-              trend={trend}
-              predicted60min={predictedGlucose60min}
-            />
+          {activeTab === "journey" && (
+            <>
+              <SubNav items={JOURNEY_SUBS} active={journeySub} onChange={setJourneySub} />
+              {journeySub === "now" && (
+                <NowTab data={data} isDexcom={isDexcom} onRefresh={refresh} />
+              )}
+              {journeySub === "whatif" && (
+                <WhatIfSimulator
+                  currentGlucose={currentGlucose}
+                  trend={trend}
+                  predicted60min={predictedGlucose60min}
+                />
+              )}
+              {journeySub === "progress" && (
+                <JourneyTab currentGlucose={currentGlucose} />
+              )}
+            </>
           )}
 
           {activeTab === "twin" && (
             <DigitalTwinDashboard currentGlucose={currentGlucose} />
           )}
 
-          {activeTab === "journey" && (
-            <JourneyTab currentGlucose={currentGlucose} />
+          {activeTab === "explore" && (
+            <>
+              <SubNav items={EXPLORE_SUBS} active={exploreSub} onChange={setExploreSub} />
+              {exploreSub === "circles" && <CirclesTab />}
+              {exploreSub === "games" && <GamesTab />}
+              {exploreSub === "learn" && <LearnTab />}
+            </>
           )}
-
-          {activeTab === "circles" && <CirclesTab />}
-
-          {activeTab === "games" && <GamesTab />}
-
-          {activeTab === "learn" && <LearnTab />}
         </div>
 
         {/* Safety footer */}
@@ -188,7 +241,7 @@ const Index = () => {
         </footer>
       </div>
 
-      <BottomNav tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
+      <BottomNav tabs={TOP_TABS} activeTab={activeTab} onChange={setActiveTab} />
     </div>
   );
 };

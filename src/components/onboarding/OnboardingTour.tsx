@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Joyride, { Step, CallBackProps, STATUS, EVENTS } from "react-joyride";
 
-type TourTabId = "now" | "whatif" | "twin" | "journey" | "circles" | "games" | "learn";
+type TourTabId = "journey" | "twin" | "explore";
 
 interface OnboardingTourProps {
   run: boolean;
@@ -43,15 +43,21 @@ const NOW_STEPS: Step[] = [
     placement: "top",
   },
   {
-    target: '[data-tour="tab-whatif"]',
-    content: "Tap here to explore 'What If' scenarios — see how food and exercise could affect your glucose.",
-    title: "🔮 What If Tab",
+    target: '[data-tour="tab-journey"]',
+    content: "Your Journey holds your current reading, What If scenarios, and your progress over time.",
+    title: "🗺️ Journey Tab",
     placement: "top",
   },
   {
     target: '[data-tour="tab-twin"]',
     content: "Your Digital Twin — an AI model that learns your patterns and answers your glucose questions.",
     title: "🧠 Digital Twin Tab",
+    placement: "top",
+  },
+  {
+    target: '[data-tour="tab-explore"]',
+    content: "Explore your Circles, play classic Games, and Learn — all in one place.",
+    title: "🧭 Explore Tab",
     placement: "top-end",
   },
 ];
@@ -77,10 +83,10 @@ export function OnboardingTour({ run, onFinish, activeTab, onChangeTab }: Onboar
     }
   }, [onFinish]);
 
-  // Ensure we're on the "now" tab when tour is running
+  // Ensure we're on the Journey tab when tour is running
   useEffect(() => {
-    if (run && activeTab !== "now") {
-      onChangeTab("now");
+    if (run && activeTab !== "journey") {
+      onChangeTab("journey");
     }
   }, [run, activeTab, onChangeTab]);
 
