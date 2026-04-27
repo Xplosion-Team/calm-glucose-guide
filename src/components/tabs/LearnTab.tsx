@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useScreenContext } from "@/hooks/useScreenContext";
 import { BookOpen, Search, Clock, ChevronRight, Bookmark, BookmarkCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -106,6 +107,23 @@ export function LearnTab() {
   const [category, setCategory] = useState<Category>("All");
   const [selected, setSelected] = useState<Lesson | null>(null);
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
+
+  useScreenContext(
+    useMemo(
+      () => ({
+        screen: "Learn",
+        status: `${LESSONS.length} short lessons about glucose, food, movement, and mindset.`,
+        highlights: [
+          `Today's pick: "${FEATURED.title}" — ${FEATURED.preview}`,
+          `Lessons are grouped into Basics, Food, Movement, and Mindset.`,
+          `You can search for a topic or bookmark lessons to read later.`,
+        ],
+        data: { lessonCount: LESSONS.length, featured: FEATURED.title },
+        fallback: `You're on the Learn screen. There are ${LESSONS.length} short lessons here, organized by Basics, Food, Movement, and Mindset. Today's pick is "${FEATURED.title}". Want more detail?`,
+      }),
+      [],
+    ),
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

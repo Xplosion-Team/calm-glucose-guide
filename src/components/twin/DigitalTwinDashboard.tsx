@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Cpu, WifiOff } from "lucide-react";
 import { BrainQuery } from "./BrainQuery";
 import { TimelineChart } from "./TimelineChart";
 import { checkHealth } from "@/lib/digital-twin-api";
+import { useScreenContext } from "@/hooks/useScreenContext";
 
 interface DigitalTwinDashboardProps {
   currentGlucose: number;
@@ -14,6 +15,35 @@ export function DigitalTwinDashboard({ currentGlucose }: DigitalTwinDashboardPro
   useEffect(() => {
     checkHealth().then(setOnline);
   }, []);
+
+  useScreenContext(
+    useMemo(
+      () => ({
+        screen: "Digital Twin",
+        status:
+          online === false
+            ? "The Digital Twin is offline right now."
+            : online === true
+            ? `The Digital Twin is online. Your current glucose is ${currentGlucose}.`
+            : `Checking the Digital Twin connection. Your current glucose is ${currentGlucose}.`,
+        highlights:
+          online === false
+            ? ["The backend is unreachable. Predictions and questions will return shortly once it is back online."]
+            : [
+                "Ask the Twin a question about your glucose patterns.",
+                "See a predicted timeline for the next two hours.",
+                "The Twin uses your recent readings to model what is likely next.",
+              ],
+        data: { currentGlucose, online },
+        fallback:
+          online === false
+            ? `You're on the Digital Twin screen. The Twin is offline right now, so predictions are paused. Want more detail?`
+            : `You're on the Digital Twin screen. Your current glucose is ${currentGlucose}. You can ask the Twin a question or see a predicted timeline for the next two hours. Want more detail?`,
+      }),
+      [online, currentGlucose],
+    ),
+  );
+
 
   return (
     <div className="space-y-8">

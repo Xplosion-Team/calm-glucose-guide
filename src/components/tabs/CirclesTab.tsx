@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Users, Heart, MessageCircle, UserPlus, Bell } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { useScreenContext } from "@/hooks/useScreenContext";
 
 interface CircleMember {
   id: string;
@@ -60,6 +61,24 @@ const UPDATES: Update[] = [
 export function CirclesTab() {
   const { toast } = useToast();
   const [reactedIds, setReactedIds] = useState<Set<string>>(new Set());
+
+  useScreenContext(
+    useMemo(() => {
+      const onlineCount = MEMBERS.filter((m) => m.status === "online").length;
+      const latest = UPDATES[0];
+      return {
+        screen: "Circles",
+        status: `You have ${MEMBERS.length} people in your circle, ${onlineCount} online right now.`,
+        highlights: [
+          `Latest update: ${latest.who} said, "${latest.text}"`,
+          `Dr. Patel reviewed your week.`,
+          `You can invite someone new to your circle from this screen.`,
+        ],
+        data: { members: MEMBERS.length, online: onlineCount, updates: UPDATES.length },
+        fallback: `You're on the Circles screen. You have ${MEMBERS.length} people in your circle, and ${onlineCount} are online. Your latest update is from ${latest.who}. Want more detail?`,
+      };
+    }, []),
+  );
 
   const handleReact = (id: string) => {
     setReactedIds((prev) => {

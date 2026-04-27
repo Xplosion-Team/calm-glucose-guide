@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GlucoseDisplay } from "@/components/GlucoseDisplay";
@@ -5,6 +6,7 @@ import { MessageCard } from "@/components/MessageCard";
 import { SuggestionCard } from "@/components/SuggestionCard";
 import { TimeInfo } from "@/components/TimeInfo";
 import { PredictionPreview } from "@/components/PredictionPreview";
+import { useScreenContext } from "@/hooks/useScreenContext";
 import type { GlucoseData } from "@/types/glucose";
 
 interface NowTabProps {
@@ -23,6 +25,46 @@ export function NowTab({ data, isDexcom, onRefresh }: NowTabProps) {
     timestamp,
     interpretation,
   } = data;
+
+  useScreenContext(
+    useMemo(
+      () => ({
+        screen: "Now",
+        status: `Your glucose is ${currentGlucose} mg/dL — ${interpretation.state}.`,
+        highlights: [
+          interpretation.message,
+          interpretation.suggestion ?? "",
+          `In about 30 minutes you're likely around ${predictedGlucose30min} mg/dL.`,
+          `In an hour, around ${predictedGlucose60min} mg/dL.`,
+          recentMeal ? `Recent meal: ${recentMeal}.` : "",
+          recentActivity ? `Recent activity: ${recentActivity}.` : "",
+          isDexcom ? "Live Dexcom data is connected." : "Showing demo data — connect your CGM for live readings.",
+        ].filter(Boolean) as string[],
+        data: {
+          currentGlucose,
+          predicted30: predictedGlucose30min,
+          predicted60: predictedGlucose60min,
+          state: interpretation.state,
+          urgency: interpretation.urgency,
+          isDexcom,
+        },
+        fallback: `You're on the Now screen. Your glucose is ${currentGlucose} milligrams per deciliter, ${interpretation.state.toLowerCase()}. ${interpretation.message} Want more detail?`,
+      }),
+      [
+        currentGlucose,
+        predictedGlucose30min,
+        predictedGlucose60min,
+        recentMeal,
+        recentActivity,
+        interpretation.state,
+        interpretation.urgency,
+        interpretation.message,
+        interpretation.suggestion,
+        isDexcom,
+      ],
+    ),
+  );
+
 
   return (
     <>

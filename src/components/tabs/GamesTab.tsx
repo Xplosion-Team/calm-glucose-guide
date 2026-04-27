@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useScreenContext } from "@/hooks/useScreenContext";
 import {
   Gamepad2,
   Trophy,
@@ -463,6 +464,23 @@ export function GamesTab() {
   const [points, setPoints] = useState(135);
 
   const earnedCount = ACHIEVEMENTS.filter((a) => a.earned).length;
+
+  useScreenContext(
+    useMemo(
+      () => ({
+        screen: "Games",
+        status: `You have ${points} points and ${earnedCount} achievements so far.`,
+        highlights: [
+          `Pick a card game like Solitaire or Spades — sessions are 5 minutes.`,
+          `After each session, you'll answer a few quick questions about glucose to earn extra points.`,
+          `Keep playing to unlock more achievements.`,
+        ],
+        data: { points, earnedAchievements: earnedCount, totalGames: GAMES.length },
+        fallback: `You're on the Games screen. You have ${points} points and ${earnedCount} achievements. Pick a card game for a relaxing five-minute session, then answer a few glucose questions for bonus points. Want more detail?`,
+      }),
+      [points, earnedCount],
+    ),
+  );
 
   return (
     <div className="space-y-6 animate-fade-in pb-4">

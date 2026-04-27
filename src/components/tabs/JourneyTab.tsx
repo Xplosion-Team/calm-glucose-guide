@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { Award, Calendar, Flame, TrendingUp, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useScreenContext } from "@/hooks/useScreenContext";
 
 interface JourneyTabProps {
   currentGlucose: number;
@@ -59,6 +61,24 @@ const STATS = [
 
 export function JourneyTab({ currentGlucose: _ }: JourneyTabProps) {
   const goalProgress = 78; // % time in range — matches STATS
+
+  useScreenContext(
+    useMemo(
+      () => ({
+        screen: "Progress",
+        status: `You've been tracking for 14 days, with 78 percent of time in range — your weekly goal is 80.`,
+        highlights: [
+          "You're on a 7-day streak inside your healthy zone.",
+          "Your average glucose this period is around 118.",
+          "Your best streak so far is 7 days.",
+          "Recent milestone: smoothest fasting reading in 30 days.",
+        ],
+        data: { daysTracked: 14, timeInRange: 78, avgGlucose: 118, bestStreak: "7d", goalProgress },
+        fallback: `You're on the Progress screen. You've been tracking for fourteen days, and you're in range about seventy-eight percent of the time — almost at your weekly goal of eighty. You're on a seven-day streak. Want more detail?`,
+      }),
+      [],
+    ),
+  );
 
   return (
     <div className="space-y-6 animate-fade-in pb-4">

@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useMemo, useState, useRef } from "react";
+import { useScreenContext } from "@/hooks/useScreenContext";
 import { Play, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MealSelector } from "./MealSelector";
@@ -18,6 +19,25 @@ export function WhatIfSimulator({ currentGlucose, trend, predicted60min }: WhatI
   const [exercise, setExercise] = useState<ExerciseInput | null>(null);
   const [result, setResult] = useState<SimulationResult | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
+
+  useScreenContext(
+    useMemo(
+      () => ({
+        screen: "What If",
+        status: `Your glucose is ${currentGlucose} and ${trend}. Predicted in an hour: ${predicted60min}.`,
+        highlights: [
+          "Pick a meal and an activity to see how they might change your glucose over the next hour.",
+          result
+            ? "You've just run a simulation — the result is shown above."
+            : "You haven't run a simulation yet on this screen.",
+          "Simulations are estimates — they help you imagine, not diagnose.",
+        ],
+        data: { currentGlucose, trend, predicted60min, hasResult: !!result },
+        fallback: `You're on the What If screen. Your glucose is ${currentGlucose} and ${trend}. Try a meal and an activity to see how they might change your glucose. Want more detail?`,
+      }),
+      [currentGlucose, trend, predicted60min, result],
+    ),
+  );
 
   // "Resting" with 0 duration is effectively no action
   const hasInput = meal || (exercise && !(exercise.type === "resting" && exercise.durationMinutes === 0));
