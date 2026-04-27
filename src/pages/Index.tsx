@@ -201,7 +201,11 @@ const Index = () => {
         <div className="mt-4">
           {activeTab === "journey" && (
             <>
-              <SubNav items={JOURNEY_SUBS} active={journeySub} onChange={setJourneySub} />
+              <SubNav<JourneySub>
+                items={JOURNEY_SUBS}
+                active={journeySub}
+                onChange={setJourneySub}
+              />
               {journeySub === "now" && (
                 <NowTab data={data} isDexcom={isDexcom} onRefresh={refresh} />
               )}
@@ -224,7 +228,11 @@ const Index = () => {
 
           {activeTab === "explore" && (
             <>
-              <SubNav items={EXPLORE_SUBS} active={exploreSub} onChange={setExploreSub} />
+              <SubNav<ExploreSub>
+                items={EXPLORE_SUBS}
+                active={exploreSub}
+                onChange={setExploreSub}
+              />
               {exploreSub === "circles" && <CirclesTab />}
               {exploreSub === "games" && <GamesTab />}
               {exploreSub === "learn" && <LearnTab />}

@@ -107,24 +107,23 @@ describe("OnboardingChecklist", () => {
 describe("OnboardingTour", () => {
   it("renders without crashing when run=false", () => {
     const { container } = render(
-      <OnboardingTour run={false} onFinish={vi.fn()} activeTab="now" onChangeTab={vi.fn()} />
+      <OnboardingTour run={false} onFinish={vi.fn()} activeTab="journey" onChangeTab={vi.fn()} />
     );
-    // Joyride should not render visible tooltip when not running
     expect(container).toBeDefined();
   });
 
-  it("switches to 'now' tab when tour starts on different tab", () => {
+  it("switches to 'journey' tab when tour starts on different tab", () => {
     const onChangeTab = vi.fn();
     render(
-      <OnboardingTour run={true} onFinish={vi.fn()} activeTab="whatif" onChangeTab={onChangeTab} />
+      <OnboardingTour run={true} onFinish={vi.fn()} activeTab="twin" onChangeTab={onChangeTab} />
     );
-    expect(onChangeTab).toHaveBeenCalledWith("now");
+    expect(onChangeTab).toHaveBeenCalledWith("journey");
   });
 
-  it("does not switch tab when already on 'now'", () => {
+  it("does not switch tab when already on 'journey'", () => {
     const onChangeTab = vi.fn();
     render(
-      <OnboardingTour run={true} onFinish={vi.fn()} activeTab="now" onChangeTab={onChangeTab} />
+      <OnboardingTour run={true} onFinish={vi.fn()} activeTab="journey" onChangeTab={onChangeTab} />
     );
     expect(onChangeTab).not.toHaveBeenCalled();
   });
