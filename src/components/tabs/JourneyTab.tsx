@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { Award, Calendar, Flame, TrendingUp, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useScreenContext } from "@/hooks/useScreenContext";
 
 interface JourneyTabProps {
   currentGlucose: number;
