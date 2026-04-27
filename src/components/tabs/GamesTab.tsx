@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useScreenContext } from "@/hooks/useScreenContext";
 import {
   Gamepad2,
   Trophy,
