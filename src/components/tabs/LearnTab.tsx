@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useScreenContext } from "@/hooks/useScreenContext";
 import { BookOpen, Search, Clock, ChevronRight, Bookmark, BookmarkCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
