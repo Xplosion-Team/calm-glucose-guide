@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Cpu, WifiOff } from "lucide-react";
 import { BrainQuery } from "./BrainQuery";
 import { TimelineChart } from "./TimelineChart";
 import { checkHealth } from "@/lib/digital-twin-api";
+import { useScreenContext } from "@/hooks/useScreenContext";
 
 interface DigitalTwinDashboardProps {
   currentGlucose: number;
