@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Cpu, WifiOff } from "lucide-react";
+import { Sparkles, WifiOff } from "lucide-react";
 import { BrainQuery } from "./BrainQuery";
 import { TimelineChart } from "./TimelineChart";
 import { checkHealth } from "@/lib/digital-twin-api";
@@ -50,11 +50,11 @@ export function DigitalTwinDashboard({ currentGlucose }: DigitalTwinDashboardPro
       {/* Header */}
       <div className="text-center py-4">
         <div className="inline-flex items-center gap-2 mb-2">
-          <Cpu className="w-6 h-6 text-primary" />
-          <h2 className="text-2xl font-semibold text-foreground">Digital Twin</h2>
+          <Sparkles className="w-6 h-6 text-primary" />
+          <h2 className="text-2xl font-semibold text-foreground">What if I…</h2>
         </div>
         <p className="text-lg text-muted-foreground max-w-md mx-auto">
-          Your personal glucose model — ask questions and see predictions.
+          Your personal glucose guide — ask questions and see what might happen.
         </p>
         {online !== null && (
           <span
