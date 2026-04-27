@@ -36,7 +36,7 @@ type ExploreSub = "circles" | "games" | "learn";
 
 const TOP_TABS: { id: TabId; label: string; icon: typeof Activity }[] = [
   { id: "journey", label: "Journey", icon: Map },
-  { id: "twin", label: "Twin", icon: HelpCircle },
+  { id: "twin", label: "What If", icon: HelpCircle },
   { id: "explore", label: "Explore", icon: Compass },
 ];
 
