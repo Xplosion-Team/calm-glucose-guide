@@ -1,7 +1,7 @@
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type TabId = "now" | "whatif" | "twin" | "journey" | "circles" | "games" | "learn";
+export type TabId = "journey" | "twin" | "explore";
 
 interface TabDef {
   id: TabId;
@@ -22,9 +22,8 @@ export function BottomNav({ tabs, activeTab, onChange }: BottomNavProps) {
       aria-label="Primary"
     >
       <div className="container max-w-3xl mx-auto px-1">
-        {/* Horizontal scroll on small screens, even spread on larger */}
         <div
-          className="flex overflow-x-auto no-scrollbar snap-x snap-mandatory sm:justify-between"
+          className="flex sm:justify-between"
           role="tablist"
         >
           {tabs.map(({ id, label, icon: Icon }) => {
@@ -37,7 +36,7 @@ export function BottomNav({ tabs, activeTab, onChange }: BottomNavProps) {
                 data-tour={`tab-${id}`}
                 onClick={() => onChange(id)}
                 className={cn(
-                  "snap-center shrink-0 flex-1 min-w-[68px] flex flex-col items-center gap-1 py-2.5 px-1 text-[11px] sm:text-xs font-medium transition-colors",
+                  "flex-1 flex flex-col items-center gap-1 py-2.5 px-1 text-xs font-medium transition-colors",
                   isActive
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
@@ -45,7 +44,7 @@ export function BottomNav({ tabs, activeTab, onChange }: BottomNavProps) {
               >
                 <Icon
                   className={cn(
-                    "w-5 h-5 transition-transform",
+                    "w-6 h-6 transition-transform",
                     isActive && "stroke-[2.5] scale-110"
                   )}
                   aria-hidden="true"
