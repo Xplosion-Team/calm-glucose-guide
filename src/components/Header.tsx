@@ -14,7 +14,7 @@ export function Header({ greeting }: HeaderProps) {
           <Leaf className="w-7 h-7 text-primary-foreground" />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-medium text-muted-foreground">Greens Health</p>
+          <p className="text-sm font-medium text-muted-foreground">Your Health Guide</p>
           <h1 className="text-2xl font-bold text-foreground truncate">{greeting}</h1>
         </div>
       </div>

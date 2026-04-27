@@ -51,11 +51,11 @@ export function TimelineChart({ currentGlucose }: TimelineChartProps) {
     <div className="space-y-4">
       <div className="flex items-center gap-2 text-primary">
         <TrendingUp className="w-5 h-5" />
-        <h3 className="font-semibold text-lg">Predict Meal Impact</h3>
+        <h3 className="font-semibold text-lg">See what might happen</h3>
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        See how a meal might affect your glucose over the next 2 hours.
+      <p className="text-base text-muted-foreground">
+        A gentle preview of how a meal could shape the next couple of hours.
       </p>
 
       <div className="grid grid-cols-2 gap-3">
@@ -71,7 +71,7 @@ export function TimelineChart({ currentGlucose }: TimelineChartProps) {
 
       <Button onClick={handlePredict} disabled={loading} className="w-full gap-2">
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LineChart className="w-4 h-4" />}
-        Predict Timeline
+        Show me the picture
       </Button>
 
       {timeline && (

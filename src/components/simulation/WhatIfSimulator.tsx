@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { MealSelector } from "./MealSelector";
 import { ExerciseSelector } from "./ExerciseSelector";
 import { SimulationResultDisplay } from "./SimulationResult";
+import { BrainQuery } from "@/components/twin/BrainQuery";
 import { runSimulation } from "@/lib/simulation-engine";
 import type { MealInput, ExerciseInput, SimulationResult } from "@/types/simulation";
 
@@ -69,16 +70,28 @@ export function WhatIfSimulator({ currentGlucose, trend, predicted60min }: WhatI
       {/* Introduction */}
       <div className="text-center py-4">
         <h2 className="text-2xl font-semibold text-foreground mb-2">
-          What if...?
+          What if I…?
         </h2>
         <p className="text-lg text-muted-foreground max-w-md mx-auto">
-          Explore how eating or moving might affect your blood sugar. 
-          This is just to help you learn – not medical advice.
+          Wonder how something might affect your blood sugar? Ask in your own words,
+          or pick a common scenario below. Just for learning — not medical advice.
         </p>
       </div>
 
       {!result ? (
         <>
+          {/* Conversational hero — ask in your own words */}
+          <div className="rounded-2xl border-2 border-primary/20 bg-primary/5 p-5">
+            <BrainQuery currentGlucose={currentGlucose} />
+          </div>
+
+          {/* Or pick a scenario */}
+          <div className="flex items-center gap-3 pt-2">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-sm text-muted-foreground">or pick a common scenario</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
           {/* Input selectors */}
           <div className="space-y-4">
             <MealSelector value={meal} onChange={setMeal} />
