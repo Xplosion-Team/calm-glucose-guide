@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Send, Loader2, Brain } from "lucide-react";
+import { Send, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,17 +37,17 @@ export function BrainQuery({ currentGlucose }: BrainQueryProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 text-primary">
-        <Brain className="w-5 h-5" />
-        <h3 className="font-semibold text-lg">Ask Your Digital Twin</h3>
+        <Sparkles className="w-5 h-5" />
+        <h3 className="font-semibold text-lg">What if I…</h3>
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        Ask a question about food, activity, or your glucose — your twin will reason about it.
+      <p className="text-base text-muted-foreground">
+        Ask anything about food, a walk, or how you're feeling. Your guide will think it through with you.
       </p>
 
       <div className="flex gap-2">
         <Input
-          placeholder="e.g. What if I eat 50g of carbs?"
+          placeholder="e.g. What if I have a sandwich for lunch?"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAsk()}
