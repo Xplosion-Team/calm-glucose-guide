@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Joyride, { Step, CallBackProps, STATUS, EVENTS } from "react-joyride";
 
-type TourTabId = "journey" | "twin" | "explore";
+type TourTabId = "journey" | "twin" | "health" | "explore";
 
 interface OnboardingTourProps {
   run: boolean;

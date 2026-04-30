@@ -228,6 +228,8 @@ const Index = () => {
             <DigitalTwinDashboard currentGlucose={currentGlucose} />
           )}
 
+          {activeTab === "health" && <HealthTab />}
+
           {activeTab === "explore" && (
             <>
               <SubNav<ExploreSub>
