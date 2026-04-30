@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import type { GlucoseData, UserProfile, GlucoseReading } from "@/types/glucose";
 import { interpretGlucose, getTimeOfDay } from "@/lib/glucose-interpreter";
 import { supabase } from "@/integrations/supabase/client";
+import { getHealthProvider } from "@/services/health";
+import type { HealthRecord } from "@/types/health";
 
 // Demo user profile
 const demoProfile: UserProfile = {
