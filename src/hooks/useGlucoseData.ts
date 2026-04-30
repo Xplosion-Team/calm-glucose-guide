@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import type { GlucoseData, UserProfile, GlucoseReading } from "@/types/glucose";
 import { interpretGlucose, getTimeOfDay } from "@/lib/glucose-interpreter";
 import { supabase } from "@/integrations/supabase/client";
+import { getHealthProvider } from "@/services/health";
+import type { HealthRecord } from "@/types/health";
 
 // Demo user profile
 const demoProfile: UserProfile = {
@@ -60,33 +62,33 @@ function generateDemoReading(): GlucoseReading {
   };
 }
 
-// Parse Dexcom EGV records into a GlucoseReading
-function parseDexcomEgvs(records: any[]): GlucoseReading | null {
+// Convert HealthKit blood glucose records into a GlucoseReading.
+function parseHealthKitGlucose(records: HealthRecord[]): GlucoseReading | null {
   if (!records || records.length < 2) return null;
-
-  // Dexcom v3 EGV records: { value, systemTime, displayTime, trend, ... }
-  // Sort by systemTime descending to get latest first
   const sorted = [...records].sort(
-    (a, b) => new Date(b.systemTime || b.displayTime).getTime() - new Date(a.systemTime || a.displayTime).getTime()
+    (a, b) => b.startDate.getTime() - a.startDate.getTime()
   );
-
   const latest = sorted[0];
   const previous = sorted[1];
 
-  const currentGlucose = latest.value ?? latest.glucoseValue;
-  const previousGlucose = previous.value ?? previous.glucoseValue;
+  // HealthKit blood glucose may come in mmol/L; convert to mg/dL when needed.
+  const toMgDl = (r: HealthRecord) =>
+    r.unit?.toLowerCase().includes("mmol") ? r.value * 18 : r.value;
 
-  if (currentGlucose == null || previousGlucose == null) return null;
-
-  const latestTime = new Date(latest.systemTime || latest.displayTime);
-  const previousTime = new Date(previous.systemTime || previous.displayTime);
-  const timeDeltaMinutes = Math.max(1, (latestTime.getTime() - previousTime.getTime()) / 60000);
+  const currentGlucose = Math.round(toMgDl(latest));
+  const previousGlucose = Math.round(toMgDl(previous));
+  const timeDeltaMinutes = Math.max(
+    1,
+    (latest.startDate.getTime() - previous.startDate.getTime()) / 60000
+  );
 
   const rateOfChange = (currentGlucose - previousGlucose) / timeDeltaMinutes;
-  const predicted30min = Math.round(Math.max(40, Math.min(400, currentGlucose + rateOfChange * 30)));
-  const predicted60min = Math.round(Math.max(40, Math.min(400, currentGlucose + rateOfChange * 60 * 0.7)));
-
-  const timeOfDay = getTimeOfDay();
+  const predicted30min = Math.round(
+    Math.max(40, Math.min(400, currentGlucose + rateOfChange * 30))
+  );
+  const predicted60min = Math.round(
+    Math.max(40, Math.min(400, currentGlucose + rateOfChange * 60 * 0.7))
+  );
 
   return {
     currentGlucose,
@@ -94,71 +96,42 @@ function parseDexcomEgvs(records: any[]): GlucoseReading | null {
     timeDeltaMinutes,
     predictedGlucose30min: predicted30min,
     predictedGlucose60min: predicted60min,
-    recentMeal: false, // Dexcom EGV data doesn't include meal info
+    recentMeal: false,
     recentActivity: false,
-    timeOfDay,
-    timestamp: latestTime,
+    timeOfDay: getTimeOfDay(),
+    timestamp: latest.startDate,
   };
 }
 
-async function fetchDexcomData(): Promise<GlucoseReading | null> {
+async function fetchHealthKitGlucose(): Promise<{
+  reading: GlucoseReading | null;
+  isLive: boolean;
+}> {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return null;
-
-    const res = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dexcom-data?endpoint=egvs`,
-      {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
-      }
-    );
-
-    if (!res.ok) {
-      console.warn("Dexcom data fetch failed:", res.status);
-      return null;
-    }
-
-    const data = await res.json();
-    const records = data.records || data.egvs || [];
-    return parseDexcomEgvs(records);
+    const provider = await getHealthProvider();
+    // Only treat AppleHealth as "live" — Demo provider stays on the demo flag.
+    const records = await provider.read("blood_glucose", { limit: 24 });
+    const reading = parseHealthKitGlucose(records);
+    return { reading, isLive: provider.name === "AppleHealth" && !!reading };
   } catch (err) {
-    console.warn("Dexcom data fetch error:", err);
-    return null;
+    console.warn("HealthKit glucose fetch error:", err);
+    return { reading: null, isLive: false };
   }
 }
 
 export function useGlucoseData() {
   const [data, setData] = useState<GlucoseData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Renamed conceptually to "isLive" but kept as isDexcom for backwards
+  // compatibility with consumers (NowTab, Index) until they migrate.
   const [isDexcom, setIsDexcom] = useState(false);
-  
+
   const refresh = useCallback(async () => {
     setIsLoading(true);
-    
-    // Check if Dexcom is connected
-    const { data: tokenData } = await supabase
-      .from("dexcom_connection_status")
-      .select("id")
-      .maybeSingle();
 
-    let reading: GlucoseReading;
-
-    if (tokenData) {
-      const dexcomReading = await fetchDexcomData();
-      if (dexcomReading) {
-        reading = dexcomReading;
-        setIsDexcom(true);
-      } else {
-        reading = generateDemoReading();
-        setIsDexcom(false);
-      }
-    } else {
-      reading = generateDemoReading();
-      setIsDexcom(false);
-    }
+    const { reading: hkReading, isLive } = await fetchHealthKitGlucose();
+    const reading: GlucoseReading = hkReading ?? generateDemoReading();
+    setIsDexcom(isLive);
 
     // Try to get user profile from database
     const { data: profile } = await supabase
@@ -172,7 +145,7 @@ export function useGlucoseData() {
     };
 
     const interpretation = interpretGlucose(reading, userProfile);
-    
+
     setData({
       ...reading,
       interpretation,
@@ -180,14 +153,12 @@ export function useGlucoseData() {
     });
     setIsLoading(false);
   }, []);
-  
+
   useEffect(() => {
     refresh();
-    
-    // Auto-refresh every 5 minutes
     const interval = setInterval(refresh, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [refresh]);
-  
+
   return { data, isLoading, refresh, isDexcom };
 }

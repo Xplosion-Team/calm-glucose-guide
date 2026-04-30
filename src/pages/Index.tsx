@@ -10,12 +10,13 @@ import {
   BookOpen,
   Compass,
   Map,
+  Heart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { WhatIfSimulator } from "@/components/simulation/WhatIfSimulator";
 import { DigitalTwinDashboard } from "@/components/twin/DigitalTwinDashboard";
-import { DexcomConnect } from "@/components/DexcomConnect";
+import { AppleHealthConnect } from "@/components/health/AppleHealthConnect";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
 import { BottomNav, type TabId } from "@/components/BottomNav";
@@ -24,6 +25,7 @@ import { JourneyTab } from "@/components/tabs/JourneyTab";
 import { CirclesTab } from "@/components/tabs/CirclesTab";
 import { GamesTab } from "@/components/tabs/GamesTab";
 import { LearnTab } from "@/components/tabs/LearnTab";
+import { HealthTab } from "@/components/tabs/HealthTab";
 import { useGlucoseData } from "@/hooks/useGlucoseData";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { getGreeting } from "@/lib/glucose-interpreter";
@@ -37,6 +39,7 @@ type ExploreSub = "circles" | "games" | "learn";
 const TOP_TABS: { id: TabId; label: string; icon: typeof Activity }[] = [
   { id: "journey", label: "Journey", icon: Map },
   { id: "twin", label: "What If", icon: HelpCircle },
+  { id: "health", label: "Health", icon: Heart },
   { id: "explore", label: "Explore", icon: Compass },
 ];
 
@@ -176,12 +179,12 @@ const Index = () => {
           <Header greeting={greeting} />
         </div>
 
-        {/* Dexcom Connection & Sign Out */}
+        {/* Apple Health connection & Sign Out */}
         <div
           className="flex items-center justify-between mt-2 mb-4 gap-2 animate-fade-in flex-wrap"
           data-tour="dexcom"
         >
-          <DexcomConnect />
+          <AppleHealthConnect variant="compact" />
           <Button
             variant="ghost"
             size="sm"
@@ -224,6 +227,8 @@ const Index = () => {
           {activeTab === "twin" && (
             <DigitalTwinDashboard currentGlucose={currentGlucose} />
           )}
+
+          {activeTab === "health" && <HealthTab />}
 
           {activeTab === "explore" && (
             <>
