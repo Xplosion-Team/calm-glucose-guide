@@ -6,11 +6,11 @@ import {
   HelpCircle,
   TrendingUp,
   Users,
-  Gamepad2,
-  BookOpen,
   Compass,
   Map,
   Heart,
+  Sparkles,
+  Apple,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
@@ -21,10 +21,9 @@ import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
 import { BottomNav, type TabId } from "@/components/BottomNav";
 import { NowTab } from "@/components/tabs/NowTab";
+import { TodayTab } from "@/components/tabs/TodayTab";
 import { JourneyTab } from "@/components/tabs/JourneyTab";
 import { CirclesTab } from "@/components/tabs/CirclesTab";
-import { GamesTab } from "@/components/tabs/GamesTab";
-import { LearnTab } from "@/components/tabs/LearnTab";
 import { HealthTab } from "@/components/tabs/HealthTab";
 import { useGlucoseData } from "@/hooks/useGlucoseData";
 import { useOnboarding } from "@/hooks/useOnboarding";
@@ -33,26 +32,33 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
-type JourneySub = "now" | "whatif" | "progress";
-type ExploreSub = "circles" | "games" | "learn";
+/* ── Sub-tab types ── */
+type JourneySub = "today" | "now" | "progress";
+type ExploreSub = "whatif" | "twin" | "health";
 
+/* ── Bottom nav: 3 tabs ── */
 const TOP_TABS: { id: TabId; label: string; icon: typeof Activity }[] = [
   { id: "journey", label: "Journey", icon: Map },
-  { id: "twin", label: "What If", icon: HelpCircle },
-  { id: "health", label: "Health", icon: Heart },
+  { id: "explore", label: "Explore", icon: Compass },
+];
+
+// We need "circles" in TabId – it already exists from the type union
+const BOTTOM_TABS: { id: TabId; label: string; icon: typeof Activity }[] = [
+  { id: "journey", label: "Journey", icon: Map },
+  { id: "health", label: "Circles", icon: Users },
   { id: "explore", label: "Explore", icon: Compass },
 ];
 
 const JOURNEY_SUBS: { id: JourneySub; label: string; icon: typeof Activity }[] = [
+  { id: "today", label: "Today", icon: Apple },
   { id: "now", label: "Now", icon: Activity },
-  { id: "whatif", label: "What If", icon: HelpCircle },
   { id: "progress", label: "Progress", icon: TrendingUp },
 ];
 
-const EXPLORE_SUBS: { id: ExploreSub; label: string; icon: typeof Users }[] = [
-  { id: "circles", label: "Circles", icon: Users },
-  { id: "games", label: "Games", icon: Gamepad2 },
-  { id: "learn", label: "Learn", icon: BookOpen },
+const EXPLORE_SUBS: { id: ExploreSub; label: string; icon: typeof Activity }[] = [
+  { id: "whatif", label: "What If", icon: HelpCircle },
+  { id: "twin", label: "Insights", icon: Sparkles },
+  { id: "health", label: "Health", icon: Heart },
 ];
 
 interface SubNavProps<T extends string> {
@@ -96,10 +102,9 @@ const Index = () => {
   const [authChecked, setAuthChecked] = useState(false);
   const [hasSession, setHasSession] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("journey");
-  const [journeySub, setJourneySub] = useState<JourneySub>("now");
-  const [exploreSub, setExploreSub] = useState<ExploreSub>("circles");
+  const [journeySub, setJourneySub] = useState<JourneySub>("today");
+  const [exploreSub, setExploreSub] = useState<ExploreSub>("whatif");
 
-  // Auth gate
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setHasSession(!!session);
@@ -125,11 +130,10 @@ const Index = () => {
     resetOnboarding,
   } = useOnboarding();
 
-  // Track checklist progress based on tab visits
   useEffect(() => {
-    if (activeTab === "journey" && journeySub === "whatif") completeItem("try_whatif");
-    if (activeTab === "twin") completeItem("explore_twin");
-  }, [activeTab, journeySub, completeItem]);
+    if (activeTab === "journey" && journeySub === "now") completeItem("try_whatif");
+    if (activeTab === "explore" && exploreSub === "twin") completeItem("explore_twin");
+  }, [activeTab, journeySub, exploreSub, completeItem]);
 
   if (!authChecked || !hasSession || isLoading || !data) {
     return (
@@ -174,12 +178,10 @@ const Index = () => {
       )}
 
       <div className="container max-w-lg mx-auto px-4 py-6 sm:py-8" data-readable-page>
-        {/* Header */}
         <div className="animate-fade-in" data-tour="header">
           <Header greeting={greeting} />
         </div>
 
-        {/* Apple Health connection & Sign Out */}
         <div
           className="flex items-center justify-between mt-2 mb-4 gap-2 animate-fade-in flex-wrap"
           data-tour="dexcom"
@@ -199,7 +201,6 @@ const Index = () => {
           </Button>
         </div>
 
-        {/* Tab Content */}
         <div className="mt-4">
           {activeTab === "journey" && (
             <>
@@ -208,15 +209,9 @@ const Index = () => {
                 active={journeySub}
                 onChange={setJourneySub}
               />
+              {journeySub === "today" && <TodayTab />}
               {journeySub === "now" && (
                 <NowTab data={data} isDexcom={isDexcom} onRefresh={refresh} />
-              )}
-              {journeySub === "whatif" && (
-                <WhatIfSimulator
-                  currentGlucose={currentGlucose}
-                  trend={trend}
-                  predicted60min={predictedGlucose60min}
-                />
               )}
               {journeySub === "progress" && (
                 <JourneyTab currentGlucose={currentGlucose} />
@@ -224,11 +219,8 @@ const Index = () => {
             </>
           )}
 
-          {activeTab === "twin" && (
-            <DigitalTwinDashboard currentGlucose={currentGlucose} />
-          )}
-
-          {activeTab === "health" && <HealthTab />}
+          {/* Circles tab — reusing "health" TabId */}
+          {activeTab === "health" && <CirclesTab />}
 
           {activeTab === "explore" && (
             <>
@@ -237,14 +229,21 @@ const Index = () => {
                 active={exploreSub}
                 onChange={setExploreSub}
               />
-              {exploreSub === "circles" && <CirclesTab />}
-              {exploreSub === "games" && <GamesTab />}
-              {exploreSub === "learn" && <LearnTab />}
+              {exploreSub === "whatif" && (
+                <WhatIfSimulator
+                  currentGlucose={currentGlucose}
+                  trend={trend}
+                  predicted60min={predictedGlucose60min}
+                />
+              )}
+              {exploreSub === "twin" && (
+                <DigitalTwinDashboard currentGlucose={currentGlucose} />
+              )}
+              {exploreSub === "health" && <HealthTab />}
             </>
           )}
         </div>
 
-        {/* Safety footer */}
         <footer className="mt-12 text-center text-sm text-muted-foreground animate-fade-in-delay-3">
           <p className="max-w-xs mx-auto leading-relaxed">
             This is your health companion, not medical advice.
@@ -253,7 +252,7 @@ const Index = () => {
         </footer>
       </div>
 
-      <BottomNav tabs={TOP_TABS} activeTab={activeTab} onChange={setActiveTab} />
+      <BottomNav tabs={BOTTOM_TABS} activeTab={activeTab} onChange={setActiveTab} />
     </div>
   );
 };
