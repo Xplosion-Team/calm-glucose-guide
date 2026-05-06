@@ -27,39 +27,14 @@ import { CirclesTab } from "@/components/tabs/CirclesTab";
 import { HealthTab } from "@/components/tabs/HealthTab";
 import { useGlucoseData } from "@/hooks/useGlucoseData";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { useI18n } from "@/i18n/I18nProvider";
 import { getGreeting } from "@/lib/glucose-interpreter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
-/* ── Sub-tab types ── */
 type JourneySub = "today" | "now" | "progress";
 type ExploreSub = "whatif" | "twin" | "health";
-
-/* ── Bottom nav: 3 tabs ── */
-const TOP_TABS: { id: TabId; label: string; icon: typeof Activity }[] = [
-  { id: "journey", label: "Journey", icon: Map },
-  { id: "explore", label: "Explore", icon: Compass },
-];
-
-// We need "circles" in TabId – it already exists from the type union
-const BOTTOM_TABS: { id: TabId; label: string; icon: typeof Activity }[] = [
-  { id: "journey", label: "Journey", icon: Map },
-  { id: "health", label: "Circles", icon: Users },
-  { id: "explore", label: "Explore", icon: Compass },
-];
-
-const JOURNEY_SUBS: { id: JourneySub; label: string; icon: typeof Activity }[] = [
-  { id: "today", label: "Today", icon: Apple },
-  { id: "now", label: "Now", icon: Activity },
-  { id: "progress", label: "Progress", icon: TrendingUp },
-];
-
-const EXPLORE_SUBS: { id: ExploreSub; label: string; icon: typeof Activity }[] = [
-  { id: "whatif", label: "What If", icon: HelpCircle },
-  { id: "twin", label: "Insights", icon: Sparkles },
-  { id: "health", label: "Health", icon: Heart },
-];
 
 interface SubNavProps<T extends string> {
   items: { id: T; label: string; icon: typeof Activity }[];
@@ -99,11 +74,31 @@ function SubNav<T extends string>({ items, active, onChange }: SubNavProps<T>) {
 
 const Index = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [authChecked, setAuthChecked] = useState(false);
   const [hasSession, setHasSession] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("journey");
   const [journeySub, setJourneySub] = useState<JourneySub>("today");
   const [exploreSub, setExploreSub] = useState<ExploreSub>("whatif");
+
+  // Build translated tab arrays
+  const bottomTabs = [
+    { id: "journey" as TabId, label: t("nav.journey"), icon: Map },
+    { id: "health" as TabId, label: t("nav.circles"), icon: Users },
+    { id: "explore" as TabId, label: t("nav.explore"), icon: Compass },
+  ];
+
+  const journeySubs = [
+    { id: "today" as JourneySub, label: t("journey.today"), icon: Apple },
+    { id: "now" as JourneySub, label: t("journey.now"), icon: Activity },
+    { id: "progress" as JourneySub, label: t("journey.progress"), icon: TrendingUp },
+  ];
+
+  const exploreSubs = [
+    { id: "whatif" as ExploreSub, label: t("explore.whatif"), icon: HelpCircle },
+    { id: "twin" as ExploreSub, label: t("explore.insights"), icon: Sparkles },
+    { id: "health" as ExploreSub, label: t("explore.health"), icon: Heart },
+  ];
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -197,7 +192,7 @@ const Index = () => {
             className="gap-1 text-muted-foreground"
           >
             <LogOut className="w-4 h-4" aria-hidden="true" />
-            Sign out
+            {t("auth.signOut")}
           </Button>
         </div>
 
@@ -205,7 +200,7 @@ const Index = () => {
           {activeTab === "journey" && (
             <>
               <SubNav<JourneySub>
-                items={JOURNEY_SUBS}
+                items={journeySubs}
                 active={journeySub}
                 onChange={setJourneySub}
               />
@@ -219,13 +214,12 @@ const Index = () => {
             </>
           )}
 
-          {/* Circles tab — reusing "health" TabId */}
           {activeTab === "health" && <CirclesTab />}
 
           {activeTab === "explore" && (
             <>
               <SubNav<ExploreSub>
-                items={EXPLORE_SUBS}
+                items={exploreSubs}
                 active={exploreSub}
                 onChange={setExploreSub}
               />
@@ -246,13 +240,12 @@ const Index = () => {
 
         <footer className="mt-12 text-center text-sm text-muted-foreground animate-fade-in-delay-3">
           <p className="max-w-xs mx-auto leading-relaxed">
-            This is your health companion, not medical advice.
-            Always talk to your care team about concerns.
+            {t("safety.footer")}
           </p>
         </footer>
       </div>
 
-      <BottomNav tabs={BOTTOM_TABS} activeTab={activeTab} onChange={setActiveTab} />
+      <BottomNav tabs={bottomTabs} activeTab={activeTab} onChange={setActiveTab} />
     </div>
   );
 };
