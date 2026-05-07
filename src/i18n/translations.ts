@@ -50,6 +50,16 @@ const translations = {
   "preset.insulin": { en: "Insulin", es: "Insulina" },
   "preset.vitamins": { en: "Vitamins", es: "Vitaminas" },
 
+  // Photo food logging
+  "today.camera": { en: "Photo", es: "Foto" },
+  "today.analyzing": { en: "Analyzing your food…", es: "Analizando tu comida…" },
+  "today.carbsLabel": { en: "~{0}g carbs", es: "~{0}g carbos" },
+  "today.portionSmall": { en: "Small", es: "Pequeña" },
+  "today.portionMedium": { en: "Medium", es: "Mediana" },
+  "today.portionLarge": { en: "Large", es: "Grande" },
+  "today.carbsDisclaimer": { en: "Estimates are approximate — check with your care team for precise carb counting", es: "Las estimaciones son aproximadas — consulta con tu equipo médico para un conteo preciso de carbohidratos" },
+  "today.photoError": { en: "Couldn't identify food. Try typing it instead.", es: "No se pudo identificar la comida. Intenta escribirla." },
+
   // What If
   "whatif.title": { en: "What if I…?", es: "¿Y si yo…?" },
   "whatif.subtitle": { en: "Wonder how something might affect your blood sugar? Ask in your own words, or pick a common scenario below. Just for learning — not medical advice.", es: "¿Te preguntas cómo algo podría afectar tu azúcar? Pregunta con tus propias palabras, o elige un escenario común. Solo para aprender — no es consejo médico." },
