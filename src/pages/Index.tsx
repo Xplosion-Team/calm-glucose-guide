@@ -216,9 +216,8 @@ const Index = () => {
                 active={exploreSub}
                 onChange={setExploreSub}
               />
-              {(exploreSub === "whatif" || exploreSub === "twin") && (
-                <PostprandialForecast currentGlucose={currentGlucose} />
-              )}
+              {exploreSub === "whatif" && <WhatIfExplorer currentGlucose={currentGlucose} />}
+              {exploreSub === "twin" && <PostprandialForecast currentGlucose={currentGlucose} />}
               {exploreSub === "health" && <HealthTab />}
             </>
           )}
