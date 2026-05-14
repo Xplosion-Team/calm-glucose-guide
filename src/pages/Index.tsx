@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { PostprandialForecast } from "@/components/twin/PostprandialForecast";
+import { WhatIfExplorer } from "@/components/twin/WhatIfExplorer";
 import { AppleHealthConnect } from "@/components/health/AppleHealthConnect";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
@@ -215,9 +216,8 @@ const Index = () => {
                 active={exploreSub}
                 onChange={setExploreSub}
               />
-              {(exploreSub === "whatif" || exploreSub === "twin") && (
-                <PostprandialForecast currentGlucose={currentGlucose} />
-              )}
+              {exploreSub === "whatif" && <WhatIfExplorer currentGlucose={currentGlucose} />}
+              {exploreSub === "twin" && <PostprandialForecast currentGlucose={currentGlucose} />}
               {exploreSub === "health" && <HealthTab />}
             </>
           )}

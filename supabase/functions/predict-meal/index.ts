@@ -138,7 +138,65 @@ Deno.serve(async (req) => {
     }
     const userId = userData.user.id;
 
-    const body = (await req.json()) as PredictBody;
+    const body = (await req.json()) as PredictBody & {
+      mode?: string;
+      question?: string;
+      category?: string;
+      detail?: string;
+    };
+
+    // What-If narrative mode: no meal log, no prediction row — just a calm AI answer.
+    if (body?.mode === "what_if" && body.question) {
+      const baseline = body.current_glucose_mg_dl ?? 110;
+      const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+      let insight =
+        "Small, steady choices usually make the biggest difference. Try this and notice how your body responds — your care team's guidance comes first.";
+
+      if (lovableKey) {
+        try {
+          const sys =
+            "You are Calm Glucose Guide, a warm, plain-English companion for adults living with type 2 diabetes. " +
+            "Answer 'what if' questions in 2-3 short sentences. Be supportive, never clinical. " +
+            "Do NOT give medical advice, doses, or specific glucose numbers as targets. " +
+            "Mention that this is an estimate and to check with their care team for anything important.";
+          const user = `Current glucose is roughly ${baseline} mg/dL. Question: ${body.question}`;
+          const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${lovableKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                { role: "system", content: sys },
+                { role: "user", content: user },
+              ],
+            }),
+          });
+          if (res.ok) {
+            const j = await res.json();
+            const txt = j?.choices?.[0]?.message?.content;
+            if (typeof txt === "string" && txt.trim()) insight = txt.trim();
+          } else {
+            console.error("what_if AI non-ok", res.status, await res.text());
+          }
+        } catch (e) {
+          console.error("what_if AI error", e);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          mode: "what_if",
+          question: body.question,
+          insight_text: insight,
+          model_version: MODEL_VERSION,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     if (!body?.meal?.label || typeof body.meal.carbs_g !== "number") {
       return new Response(JSON.stringify({ error: "meal.label and meal.carbs_g required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
