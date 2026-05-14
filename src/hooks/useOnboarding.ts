@@ -12,28 +12,28 @@ interface OnboardingState {
 const DEFAULT_CHECKLIST: Omit<ChecklistItem, "completed">[] = [
   {
     id: "view_glucose",
-    label: "View your glucose reading",
-    description: "Check the main circle to see your current blood sugar level.",
+    label: "See your latest glucose",
+    description: "Open the Now sub-tab on Journey to see your current reading and gentle interpretation.",
   },
   {
-    id: "check_predictions",
-    label: "Check your predictions",
-    description: "Look at the 30-min and 1-hour predictions below the circle.",
+    id: "log_meal",
+    label: "Log your first meal",
+    description: "Open Today on Journey and add a meal — by photo, voice, or a few words. Logging meals is how the app learns your pattern.",
   },
   {
     id: "try_whatif",
-    label: "Try a What-If scenario",
-    description: "Go to the What If tab and simulate a meal or exercise.",
+    label: "Ask a What-If question",
+    description: "On Explore › What If, pick a category like 'eat' or 'activity' and ask a gentle question.",
   },
   {
     id: "explore_twin",
-    label: "Explore your Digital Twin",
-    description: "Visit the Twin tab and ask a question about your glucose.",
+    label: "See an after-meal forecast",
+    description: "On Explore › Insights, enter a meal to see the predicted glucose response for the next few hours.",
   },
   {
     id: "connect_dexcom",
-    label: "Connect Dexcom (optional)",
-    description: "Link your CGM for real-time data instead of demo values.",
+    label: "Connect Apple Health or your CGM (optional)",
+    description: "Link Apple Health or Dexcom so insights use your real activity, sleep, and glucose instead of demo values.",
   },
 ];
 
