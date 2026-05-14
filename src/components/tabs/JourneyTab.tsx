@@ -94,6 +94,9 @@ export function JourneyTab({ currentGlucose: _ }: JourneyTabProps) {
         </p>
       </div>
 
+      {/* Training plan */}
+      <TrainingCard />
+
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3">
         {STATS.map((s) => (
