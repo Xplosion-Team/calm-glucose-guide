@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.speak-screen]
 verify_jwt = false
+
+[functions.sms-inbound]
+verify_jwt = false
+
+[functions.send-checkin-sms]
+verify_jwt = false
