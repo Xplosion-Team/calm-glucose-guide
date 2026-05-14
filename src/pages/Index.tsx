@@ -144,15 +144,8 @@ const Index = () => {
     );
   }
 
-  const { currentGlucose, predictedGlucose60min, userProfile } = data;
+  const { currentGlucose, userProfile } = data;
   const greeting = getGreeting(userProfile.name);
-
-  const trend: "rising" | "falling" | "stable" =
-    currentGlucose > data.previousGlucose + 5
-      ? "rising"
-      : currentGlucose < data.previousGlucose - 5
-      ? "falling"
-      : "stable";
 
   return (
     <div className="min-h-screen bg-background pb-24">
