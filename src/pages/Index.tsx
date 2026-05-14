@@ -14,8 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
-import { WhatIfSimulator } from "@/components/simulation/WhatIfSimulator";
-import { DigitalTwinDashboard } from "@/components/twin/DigitalTwinDashboard";
+import { PostprandialForecast } from "@/components/twin/PostprandialForecast";
 import { AppleHealthConnect } from "@/components/health/AppleHealthConnect";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
@@ -145,15 +144,8 @@ const Index = () => {
     );
   }
 
-  const { currentGlucose, predictedGlucose60min, userProfile } = data;
+  const { currentGlucose, userProfile } = data;
   const greeting = getGreeting(userProfile.name);
-
-  const trend: "rising" | "falling" | "stable" =
-    currentGlucose > data.previousGlucose + 5
-      ? "rising"
-      : currentGlucose < data.previousGlucose - 5
-      ? "falling"
-      : "stable";
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -223,15 +215,8 @@ const Index = () => {
                 active={exploreSub}
                 onChange={setExploreSub}
               />
-              {exploreSub === "whatif" && (
-                <WhatIfSimulator
-                  currentGlucose={currentGlucose}
-                  trend={trend}
-                  predicted60min={predictedGlucose60min}
-                />
-              )}
-              {exploreSub === "twin" && (
-                <DigitalTwinDashboard currentGlucose={currentGlucose} />
+              {(exploreSub === "whatif" || exploreSub === "twin") && (
+                <PostprandialForecast currentGlucose={currentGlucose} />
               )}
               {exploreSub === "health" && <HealthTab />}
             </>
