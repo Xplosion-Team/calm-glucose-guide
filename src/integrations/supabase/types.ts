@@ -47,6 +47,42 @@ export type Database = {
         }
         Relationships: []
       }
+      food_logs: {
+        Row: {
+          carbs_grams: number | null
+          created_at: string
+          id: string
+          label: string
+          logged_at: string
+          portion_size: string | null
+          source: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          carbs_grams?: number | null
+          created_at?: string
+          id?: string
+          label: string
+          logged_at?: string
+          portion_size?: string | null
+          source?: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          carbs_grams?: number | null
+          created_at?: string
+          id?: string
+          label?: string
+          logged_at?: string
+          portion_size?: string | null
+          source?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       phone_otps: {
         Row: {
           code: string
@@ -93,6 +129,48 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_engagement: {
+        Row: {
+          created_at: string
+          id: string
+          last_checkin_sent_at: string | null
+          last_log_at: string | null
+          phone: string | null
+          timezone: string | null
+          total_meals_logged: number
+          trial_start: string
+          trial_tier: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_checkin_sent_at?: string | null
+          last_log_at?: string | null
+          phone?: string | null
+          timezone?: string | null
+          total_meals_logged?: number
+          trial_start?: string
+          trial_tier?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_checkin_sent_at?: string | null
+          last_log_at?: string | null
+          phone?: string | null
+          timezone?: string | null
+          total_meals_logged?: number
+          trial_start?: string
+          trial_tier?: string
           updated_at?: string
           user_id?: string
         }
