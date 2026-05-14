@@ -3,6 +3,7 @@ import { Award, Calendar, Flame, TrendingUp, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useScreenContext } from "@/hooks/useScreenContext";
+import { TrainingCard } from "@/components/journey/TrainingCard";
 
 interface JourneyTabProps {
   currentGlucose: number;
@@ -92,6 +93,9 @@ export function JourneyTab({ currentGlucose: _ }: JourneyTabProps) {
           A gentle look at how far you've come.
         </p>
       </div>
+
+      {/* Training plan */}
+      <TrainingCard />
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3">
