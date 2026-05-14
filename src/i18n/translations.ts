@@ -99,6 +99,58 @@ const translations = {
 
   // Language
   "lang.switch": { en: "Español", es: "English" },
+
+  // Smart logging (photo/text/voice)
+  "today.smartLogTitle": { en: "Smart log", es: "Registro inteligente" },
+  "today.modePhoto": { en: "Photo", es: "Foto" },
+  "today.modeText": { en: "Describe", es: "Describir" },
+  "today.modeVoice": { en: "Voice", es: "Voz" },
+  "today.takePhoto": { en: "Take a photo", es: "Tomar foto" },
+  "today.describePlaceholder": { en: "e.g., a bowl of oatmeal with banana", es: "p.ej., un tazón de avena con plátano" },
+  "today.identify": { en: "Identify", es: "Identificar" },
+  "today.startRecording": { en: "Tap to speak", es: "Toca para hablar" },
+  "today.stopRecording": { en: "Tap to stop", es: "Toca para parar" },
+  "today.transcribing": { en: "Transcribing…", es: "Transcribiendo…" },
+  "today.tryAgain": { en: "Try again", es: "Intentar de nuevo" },
+  "today.logIt": { en: "Log it", es: "Registrar" },
+  "today.micError": { en: "Couldn't access your microphone.", es: "No se pudo acceder al micrófono." },
+  "today.voiceError": { en: "Couldn't understand the recording. Try again.", es: "No se pudo entender la grabación. Intenta de nuevo." },
+  "today.viewJournal": { en: "View past days", es: "Ver días anteriores" },
+  "today.backToToday": { en: "Back to today", es: "Volver a hoy" },
+
+  // Portion guide
+  "portion.guideButton": { en: "See portion examples", es: "Ver ejemplos de porciones" },
+  "portion.guideTitle": { en: "Portion size guide", es: "Guía de porciones" },
+  "portion.smallHint": { en: "About a fist — light snack or small side", es: "Como un puño — bocadillo ligero o porción pequeña" },
+  "portion.mediumHint": { en: "About a regular plate — typical lunch or dinner", es: "Como un plato normal — almuerzo o cena típica" },
+  "portion.largeHint": { en: "A full plate with sides — bigger meal", es: "Plato completo con guarniciones — comida más grande" },
+
+  // Journal
+  "journal.title": { en: "Journal", es: "Diario" },
+  "journal.subtitle": { en: "Look back at what you've logged.", es: "Revisa lo que has registrado." },
+  "journal.searchPlaceholder": { en: "Search what you ate…", es: "Buscar lo que comiste…" },
+  "journal.allDays": { en: "All", es: "Todo" },
+  "journal.loading": { en: "Loading…", es: "Cargando…" },
+  "journal.empty": { en: "No entries yet for this view.", es: "Aún no hay registros para esta vista." },
+  "journal.entry": { en: "entry", es: "registro" },
+  "journal.entries": { en: "entries", es: "registros" },
+  "journal.delete": { en: "Delete entry", es: "Eliminar" },
+
+  // Training (Journey)
+  "training.title": { en: "Your training", es: "Tu entrenamiento" },
+  "training.tier": { en: "Plan", es: "Plan" },
+  "training.goalA": { en: "Plan A — log a meal every day during your trial.", es: "Plan A — registra una comida cada día durante la prueba." },
+  "training.goalB": { en: "Plan B — log a meal every other day during your trial.", es: "Plan B — registra una comida cada dos días durante la prueba." },
+  "training.goalC": { en: "Plan C — log 10 meals during your trial.", es: "Plan C — registra 10 comidas durante la prueba." },
+  "training.nutrition": { en: "Nutrition", es: "Nutrición" },
+  "training.meds": { en: "Medication", es: "Medicamentos" },
+  "training.started": { en: "Started", es: "Iniciado" },
+  "training.notYet": { en: "Not yet", es: "Aún no" },
+  "training.firstMeal": { en: "Log your first meal", es: "Registra tu primera comida" },
+  "training.tryPhoto": { en: "Try a photo log", es: "Prueba un registro con foto" },
+  "training.tryVoice": { en: "Try a voice log", es: "Prueba un registro con voz" },
+  "training.tryText": { en: "Try a text log", es: "Prueba un registro con texto" },
+  "training.logMed": { en: "Log a medication", es: "Registra un medicamento" },
 } as const;
 
 export type TranslationKey = keyof typeof translations;
