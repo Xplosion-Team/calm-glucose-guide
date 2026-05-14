@@ -126,7 +126,8 @@ const Index = () => {
   } = useOnboarding();
 
   useEffect(() => {
-    if (activeTab === "journey" && journeySub === "now") completeItem("try_whatif");
+    if (activeTab === "journey" && journeySub === "now") completeItem("view_glucose");
+    if (activeTab === "explore" && exploreSub === "whatif") completeItem("try_whatif");
     if (activeTab === "explore" && exploreSub === "twin") completeItem("explore_twin");
   }, [activeTab, journeySub, exploreSub, completeItem]);
 

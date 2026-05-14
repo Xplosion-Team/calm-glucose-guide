@@ -13,51 +13,38 @@ interface OnboardingTourProps {
 const NOW_STEPS: Step[] = [
   {
     target: '[data-tour="header"]',
-    content: "Welcome to Calm Glucose Guide! This is your personalised greeting and app header.",
-    title: "👋 Welcome!",
+    content:
+      "Welcome to Calm Glucose Guide — a calm, supportive companion built for adults living with type 2 diabetes.",
+    title: "Welcome",
     placement: "bottom",
     disableBeacon: true,
   },
   {
     target: '[data-tour="dexcom"]',
-    content: "Connect your Dexcom CGM here to see real-time glucose data instead of demo values.",
-    title: "📡 Connect Your Device",
+    content:
+      "Connect Apple Health (and your CGM if you wear one) so the app can learn from your activity, sleep, and glucose. You can also use it without connecting anything.",
+    title: "Connect your data",
     placement: "bottom",
-  },
-  {
-    target: '[data-tour="glucose-display"]',
-    content: "This is your current blood sugar reading. The colour and ring change based on your glucose state — green is stable, amber is rising, and so on.",
-    title: "🎯 Glucose Reading",
-    placement: "bottom",
-  },
-  {
-    target: '[data-tour="predictions"]',
-    content: "See where your glucose is heading in the next 30 and 60 minutes. Arrows show the trend direction.",
-    title: "📈 Predictions",
-    placement: "top",
-  },
-  {
-    target: '[data-tour="message-card"]',
-    content: "Your personal health message — a gentle interpretation of what your current reading means.",
-    title: "💬 Your Message",
-    placement: "top",
   },
   {
     target: '[data-tour="tab-journey"]',
-    content: "Your Journey holds your current reading, What If scenarios, and your progress over time.",
-    title: "🗺️ Journey Tab",
+    content:
+      "Your Journey holds Today (log your meals), Now (your latest glucose), and Progress (how the week is going).",
+    title: "Journey",
     placement: "top",
   },
   {
-    target: '[data-tour="tab-twin"]',
-    content: "Your Digital Twin — an AI model that learns your patterns and answers your glucose questions.",
-    title: "🧠 Digital Twin Tab",
+    target: '[data-tour="tab-health"]',
+    content:
+      "Your Circle is for the family or care team you choose to share gentle updates with — never automatic, always your choice.",
+    title: "Your Circle",
     placement: "top",
   },
   {
     target: '[data-tour="tab-explore"]',
-    content: "Explore your Circles, play classic Games, and Learn — all in one place.",
-    title: "🧭 Explore Tab",
+    content:
+      "Explore has two gentle tools: 'What If…' for quick questions about meals, walks, or sleep, and Insights for an after-meal forecast.",
+    title: "Explore",
     placement: "top-end",
   },
 ];
