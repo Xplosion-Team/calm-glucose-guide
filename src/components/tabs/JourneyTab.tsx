@@ -3,6 +3,7 @@ import { Award, Calendar, Flame, TrendingUp, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useScreenContext } from "@/hooks/useScreenContext";
+import { TrainingCard } from "@/components/journey/TrainingCard";
 
 interface JourneyTabProps {
   currentGlucose: number;
