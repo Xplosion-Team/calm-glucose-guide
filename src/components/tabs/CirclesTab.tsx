@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useScreenContext } from "@/hooks/useScreenContext";
+import { GamesSection } from "@/components/circles/GamesSection";
 
 interface CircleMember {
   id: string;
@@ -202,6 +203,8 @@ export function CirclesTab() {
           );
         })}
       </div>
+
+      <GamesSection />
 
       <p className="text-center text-sm text-muted-foreground max-w-sm mx-auto pt-4 border-t">
         You decide what your circle sees. Your data stays yours.
