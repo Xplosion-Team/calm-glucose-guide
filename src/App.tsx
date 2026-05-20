@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import DexcomCallback from "./pages/DexcomCallback";
 import NotFound from "./pages/NotFound";
+import { NIGHTSCOUT_ENABLED, NIGHTSCOUT_SETTINGS_PATH } from "./integrations/nightscout/featureFlag";
+import NightscoutSettingsPage from "./components/settings/nightscout/NightscoutSettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +24,9 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dexcom/callback" element={<DexcomCallback />} />
+            {NIGHTSCOUT_ENABLED && (
+              <Route path={NIGHTSCOUT_SETTINGS_PATH} element={<NightscoutSettingsPage />} />
+            )}
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
