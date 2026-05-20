@@ -262,6 +262,81 @@ export type Database = {
         }
         Relationships: []
       }
+      nightscout_connections: {
+        Row: {
+          access_token: string | null
+          api_secret_hash: string | null
+          base_url: string
+          created_at: string
+          enabled: boolean
+          id: string
+          last_error: string | null
+          last_sync_at: string | null
+          last_sync_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          api_secret_hash?: string | null
+          base_url: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_error?: string | null
+          last_sync_at?: string | null
+          last_sync_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          api_secret_hash?: string | null
+          base_url?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_error?: string | null
+          last_sync_at?: string | null
+          last_sync_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      nightscout_sync_log: {
+        Row: {
+          entries_fetched: number
+          entries_inserted: number
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          entries_fetched?: number
+          entries_inserted?: number
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          entries_fetched?: number
+          entries_inserted?: number
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       phone_otps: {
         Row: {
           code: string
