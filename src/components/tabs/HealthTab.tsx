@@ -1,15 +1,14 @@
 import { useMemo } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AppleHealthConnect } from "@/components/health/AppleHealthConnect";
+import { NightscoutConnectSection } from "@/components/settings/nightscout/NightscoutSettingsPage";
 import { MetricCard } from "@/components/health/MetricCard";
 import { useHealthKit } from "@/hooks/useHealthKit";
 import { DEFAULT_METRICS } from "@/services/health";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function HealthTab() {
-  const { snapshot, isLoading, isConnected, refresh, provider, availability } =
-    useHealthKit();
+  const { snapshot, isLoading, refresh, provider } = useHealthKit();
 
   const lastSyncLabel = useMemo(() => {
     if (!snapshot?.lastSyncAt) return "Not synced yet";
@@ -26,33 +25,32 @@ export function HealthTab() {
       <header className="space-y-2">
         <h2 className="text-2xl font-semibold text-foreground">Your health today</h2>
         <p className="text-muted-foreground">
-          A gentle picture of how your body is doing — pulled from Apple Health.
+          A gentle picture of how your body is doing — connect your Dexcom through
+          Nightscout to keep your readings in sync.
         </p>
       </header>
 
-      {/* Connect / availability state */}
-      {!isConnected || availability?.available === false ? (
-        <AppleHealthConnect variant="card" />
-      ) : (
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <AppleHealthConnect variant="compact" />
-          <span
-            className={`text-xs font-medium px-3 py-1 rounded-full ${
-              isDemo
-                ? "bg-muted text-muted-foreground"
-                : "bg-primary/10 text-primary"
-            }`}
-          >
-            {isDemo ? "● Demo data" : "● Live Apple Health"}
-          </span>
-        </div>
-      )}
+      {/* Connect Dexcom via Nightscout */}
+      <NightscoutConnectSection />
 
       {/* Today summary */}
       <section aria-labelledby="today-heading" className="space-y-3">
-        <h3 id="today-heading" className="text-lg font-medium text-foreground">
-          Today
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 id="today-heading" className="text-lg font-medium text-foreground">
+            Today
+          </h3>
+          {snapshot && (
+            <span
+              className={`text-xs font-medium px-3 py-1 rounded-full ${
+                isDemo
+                  ? "bg-muted text-muted-foreground"
+                  : "bg-primary/10 text-primary"
+              }`}
+            >
+              {isDemo ? "● Demo data" : "● Live data"}
+            </span>
+          )}
+        </div>
         {isLoading && !snapshot ? (
           <div className="grid grid-cols-2 gap-3">
             {DEFAULT_METRICS.map((m) => (
@@ -67,7 +65,7 @@ export function HealthTab() {
           </div>
         ) : (
           <p className="text-muted-foreground">
-            No readings yet. Once Apple Health has data, it'll show up here.
+            No readings yet. Once data comes in, it'll show up here.
           </p>
         )}
       </section>
