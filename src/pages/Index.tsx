@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { PostprandialForecast } from "@/components/twin/PostprandialForecast";
 import { WhatIfExplorer } from "@/components/twin/WhatIfExplorer";
-import { AppleHealthConnect } from "@/components/health/AppleHealthConnect";
+import { DexcomNightscoutConnect } from "@/components/health/DexcomNightscoutConnect";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
 import { BottomNav, type TabId } from "@/components/BottomNav";
@@ -175,7 +175,7 @@ const Index = () => {
           className="flex items-center justify-between mt-2 mb-4 gap-2 animate-fade-in flex-wrap"
           data-tour="dexcom"
         >
-          <AppleHealthConnect variant="compact" />
+          <DexcomNightscoutConnect />
           <Button
             variant="ghost"
             size="sm"
