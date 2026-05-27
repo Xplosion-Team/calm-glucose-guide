@@ -41,8 +41,16 @@ export async function testNightscout(input: {
   api_secret?: string;
   access_token?: string;
 }): Promise<NightscoutTestResult> {
+  const baseUrl = normalizeBaseUrl(input.base_url);
+  if (!baseUrl) {
+    return { ok: false, error: "Please enter your Nightscout site URL, like mirna-elizondo01.nightscoutpro.com" };
+  }
   const { data, error } = await supabase.functions.invoke("nightscout-test", {
-    body: input,
+    body: {
+      base_url: baseUrl,
+      api_secret: input.api_secret?.trim() || undefined,
+      access_token: input.access_token?.trim() || undefined,
+    },
   });
   if (error) return { ok: false, error: error.message };
   return data as NightscoutTestResult;
@@ -58,8 +66,12 @@ async function sha1Hex(input: string): Promise<string> {
 
 function normalizeBaseUrl(url: string): string | null {
   try {
-    const u = new URL(url.trim());
+    let raw = url.trim();
+    if (!raw) return null;
+    if (!/^https?:\/\//i.test(raw)) raw = `https://${raw}`;
+    const u = new URL(raw);
     if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+    if (!u.hostname.includes(".")) return null;
     return `${u.protocol}//${u.host}${u.pathname.replace(/\/+$/, "")}`;
   } catch {
     return null;
