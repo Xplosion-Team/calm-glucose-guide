@@ -24,7 +24,7 @@ function normalizeBaseUrl(url: string): string | null {
     if (!/^https?:\/\//i.test(raw)) raw = `https://${raw}`;
     const u = new URL(raw);
     if (u.protocol !== "https:" && u.protocol !== "http:") return null;
-    // If user typed just a bare name like "mirna-elizondo01", assume Nightscout on fly.dev/herokuapp is unknown — leave host as-is and let the fetch fail with a clearer error.
+    if (!u.hostname.includes(".")) return null;
     return `${u.protocol}//${u.host}${u.pathname.replace(/\/+$/, "")}`;
   } catch {
     return null;
