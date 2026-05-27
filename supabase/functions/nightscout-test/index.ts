@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
 
     const baseUrl = normalizeBaseUrl(rawUrl);
     if (!baseUrl) {
-      return new Response(JSON.stringify({ error: "Invalid Nightscout URL" }), {
+      return new Response(JSON.stringify({ error: "Please enter your full Nightscout URL (e.g. https://yoursite.herokuapp.com)" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
