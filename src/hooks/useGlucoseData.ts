@@ -129,8 +129,53 @@ export function useGlucoseData() {
   const refresh = useCallback(async () => {
     setIsLoading(true);
 
-    const { reading: hkReading, isLive } = await fetchHealthKitGlucose();
-    const reading: GlucoseReading = hkReading ?? generateDemoReading();
+    // Prefer Nightscout/Dexcom data stored in cgm_readings.
+    let reading: GlucoseReading | null = null;
+    let isLive = false;
+    try {
+      // Trigger a background Nightscout sync (best-effort, ignore errors).
+      supabase.functions.invoke("nightscout-sync", { body: {} }).catch(() => {});
+
+      const { data: cgm } = await supabase
+        .from("cgm_readings")
+        .select("mg_dl, ts")
+        .order("ts", { ascending: false })
+        .limit(2);
+
+      if (cgm && cgm.length >= 1) {
+        const latest = cgm[0];
+        const prev = cgm[1] ?? cgm[0];
+        const latestTs = new Date(latest.ts).getTime();
+        const prevTs = new Date(prev.ts).getTime();
+        const deltaMin = Math.max(1, (latestTs - prevTs) / 60000);
+        const current = Math.round(Number(latest.mg_dl));
+        const previous = Math.round(Number(prev.mg_dl));
+        const rate = (current - previous) / deltaMin;
+        reading = {
+          currentGlucose: current,
+          previousGlucose: previous,
+          timeDeltaMinutes: deltaMin,
+          predictedGlucose30min: Math.round(Math.max(40, Math.min(400, current + rate * 30))),
+          predictedGlucose60min: Math.round(Math.max(40, Math.min(400, current + rate * 60 * 0.7))),
+          recentMeal: false,
+          recentActivity: false,
+          timeOfDay: getTimeOfDay(),
+          timestamp: new Date(latest.ts),
+        };
+        isLive = true;
+      }
+    } catch (err) {
+      console.warn("cgm_readings fetch error:", err);
+    }
+
+    if (!reading) {
+      const hk = await fetchHealthKitGlucose();
+      if (hk.reading) {
+        reading = hk.reading;
+        isLive = hk.isLive;
+      }
+    }
+    if (!reading) reading = generateDemoReading();
     setIsDexcom(isLive);
 
     // Try to get user profile from database
