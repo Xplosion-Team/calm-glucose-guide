@@ -19,8 +19,12 @@ async function sha1Hex(input: string): Promise<string> {
 
 function normalizeBaseUrl(url: string): string | null {
   try {
-    const u = new URL(url.trim());
+    let raw = url.trim();
+    if (!raw) return null;
+    if (!/^https?:\/\//i.test(raw)) raw = `https://${raw}`;
+    const u = new URL(raw);
     if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+    if (!u.hostname.includes(".")) return null;
     return `${u.protocol}//${u.host}${u.pathname.replace(/\/+$/, "")}`;
   } catch {
     return null;
@@ -59,7 +63,7 @@ Deno.serve(async (req) => {
 
     const baseUrl = normalizeBaseUrl(rawUrl);
     if (!baseUrl) {
-      return new Response(JSON.stringify({ error: "Invalid Nightscout URL" }), {
+      return new Response(JSON.stringify({ error: "Please enter your full Nightscout URL (e.g. https://yoursite.herokuapp.com)" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
