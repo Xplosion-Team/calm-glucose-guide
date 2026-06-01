@@ -12,6 +12,7 @@ import { NIGHTSCOUT_ENABLED, NIGHTSCOUT_SETTINGS_PATH } from "./integrations/nig
 import NightscoutSettingsPage from "./components/settings/nightscout/NightscoutSettingsPage";
 import { T1PAL_ENABLED, T1PAL_SETTINGS_PATH } from "./integrations/t1pal/featureFlag";
 import T1PalSettingsPage from "./components/settings/t1pal/T1PalSettingsPage";
+import MedicationsPage from "./components/medications/MedicationsPage";
 
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
             {T1PAL_ENABLED && (
               <Route path={T1PAL_SETTINGS_PATH} element={<T1PalSettingsPage />} />
             )}
+            <Route path="/medications" element={<MedicationsPage />} />
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
