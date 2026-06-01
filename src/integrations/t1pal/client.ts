@@ -24,12 +24,13 @@ export function normalizeT1PalUrl(url: string): string {
 }
 
 export async function getT1PalConnection(): Promise<T1PalConnection | null> {
-  const { data } = await supabase
-    .from("t1pal_connections" as any)
+  const { data } = await (supabase as any)
+    .from("t1pal_connections")
     .select("id, user_id, t1pal_url, status, last_sync_at, last_successful_reading_at, last_error")
     .maybeSingle();
   return (data as T1PalConnection | null) ?? null;
 }
+
 
 export async function testT1PalConnection(input: {
   t1pal_url: string;
@@ -54,8 +55,8 @@ export async function saveT1PalConnection(input: {
   if (!user) return { ok: false, error: "Not signed in." };
   const t1pal_url = normalizeT1PalUrl(input.t1pal_url);
   if (!t1pal_url) return { ok: false, error: "Invalid URL." };
-  const { error } = await supabase
-    .from("t1pal_connections" as any)
+  const { error } = await (supabase as any)
+    .from("t1pal_connections")
     .upsert(
       {
         user_id: user.id,
@@ -66,6 +67,7 @@ export async function saveT1PalConnection(input: {
       },
       { onConflict: "user_id" },
     );
+
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
@@ -81,7 +83,8 @@ export async function disconnectT1Pal(): Promise<{ ok: boolean; error?: string }
   const { data: userRes } = await supabase.auth.getUser();
   const user = userRes?.user;
   if (!user) return { ok: false, error: "Not signed in." };
-  const { error } = await supabase.from("t1pal_connections" as any).delete().eq("user_id", user.id);
+  const { error } = await (supabase as any).from("t1pal_connections").delete().eq("user_id", user.id);
+
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
