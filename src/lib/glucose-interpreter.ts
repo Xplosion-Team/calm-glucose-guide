@@ -1,4 +1,5 @@
 import type { GlucoseReading, GlucoseInterpretation, GlucoseState, UrgencyLevel, UserProfile } from "@/types/glucose";
+import { assessMedicationContext, type ActiveMedication } from "@/lib/medication-effects";
 
 // Classify glucose state based on dynamics
 function classifyState(reading: GlucoseReading): GlucoseState {
