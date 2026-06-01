@@ -184,23 +184,30 @@ export function useGlucoseData() {
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data: evs } = await supabase
         .from("medication_events")
-        .select("taken_at, dose, medications(name, med_class)")
+        .select("taken_at, dose, medication_id")
         .gte("taken_at", since)
         .order("taken_at", { ascending: false })
         .limit(20);
       if (evs && evs.length > 0) {
+        const medIds = Array.from(new Set(evs.map((e) => e.medication_id)));
+        const { data: meds } = await supabase
+          .from("medications")
+          .select("id, name, med_class")
+          .in("id", medIds);
+        const medMap = new Map((meds ?? []).map((m) => [m.id, m]));
         const now = Date.now();
         reading.recentMedications = evs
-          .map((e: { taken_at: string; dose: number | null; medications: { name: string; med_class: string } | null }) => {
-            if (!e.medications) return null;
+          .map((e) => {
+            const m = medMap.get(e.medication_id);
+            if (!m) return null;
             return {
-              name: e.medications.name,
-              med_class: e.medications.med_class as NonNullable<typeof reading>["recentMedications"] extends Array<infer R> ? R extends { med_class: infer C } ? C : never : never,
+              name: m.name,
+              med_class: m.med_class as NonNullable<GlucoseReading["recentMedications"]>[number]["med_class"],
               takenMinutesAgo: Math.max(0, (now - new Date(e.taken_at).getTime()) / 60000),
               dose: e.dose,
             };
           })
-          .filter(Boolean) as NonNullable<typeof reading.recentMedications>;
+          .filter((x): x is NonNullable<typeof x> => x !== null);
       }
     } catch (err) {
       console.warn("medication_events fetch error:", err);
