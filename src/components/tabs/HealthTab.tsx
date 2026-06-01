@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { T1PalConnectSection } from "@/components/settings/t1pal/T1PalSettingsPage";
+import { MedicationsLinkCard } from "@/components/medications/MedicationsPage";
 import { MetricCard } from "@/components/health/MetricCard";
 import { useHealthKit } from "@/hooks/useHealthKit";
 import { DEFAULT_METRICS } from "@/services/health";
@@ -32,6 +33,9 @@ export function HealthTab() {
 
       {/* Connect T1Pal */}
       <T1PalConnectSection />
+
+      {/* Medications */}
+      <MedicationsLinkCard />
 
       {/* Today summary */}
       <section aria-labelledby="today-heading" className="space-y-3">

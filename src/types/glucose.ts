@@ -21,6 +21,21 @@ export interface UserProfile {
   name: string;
 }
 
+export interface RecentMedication {
+  name: string;
+  med_class:
+    | "rapid_insulin"
+    | "long_insulin"
+    | "sulfonylurea"
+    | "metformin"
+    | "glp1"
+    | "sglt2"
+    | "dpp4"
+    | "other";
+  takenMinutesAgo: number;
+  dose: number | null;
+}
+
 export interface GlucoseReading {
   currentGlucose: number;
   previousGlucose: number;
@@ -31,6 +46,8 @@ export interface GlucoseReading {
   recentActivity: boolean;
   timeOfDay: "morning" | "afternoon" | "evening" | "night";
   timestamp: Date;
+  /** Recent medication events that may still be acting (optional). */
+  recentMedications?: RecentMedication[];
 }
 
 export interface GlucoseInterpretation {

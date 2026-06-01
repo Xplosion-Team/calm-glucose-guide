@@ -1,4 +1,5 @@
 import type { GlucoseReading, GlucoseInterpretation, GlucoseState, UrgencyLevel, UserProfile } from "@/types/glucose";
+import { assessMedicationContext, type ActiveMedication } from "@/lib/medication-effects";
 
 // Classify glucose state based on dynamics
 function classifyState(reading: GlucoseReading): GlucoseState {
@@ -101,15 +102,35 @@ function generateSuggestion(state: GlucoseState, reading: GlucoseReading, profil
 // Main interpretation function
 export function interpretGlucose(reading: GlucoseReading, profile: UserProfile): GlucoseInterpretation {
   const state = classifyState(reading);
-  const urgency = determineUrgency(state, reading);
-  const message = generateMessage(state, reading, profile);
-  const suggestion = generateSuggestion(state, reading, profile);
-  
+  let urgency = determineUrgency(state, reading);
+  let message = generateMessage(state, reading, profile);
+  let suggestion = generateSuggestion(state, reading, profile);
+
+  // Factor in recent medications (insulin, sulfonylureas, oral agents).
+  const active: ActiveMedication[] = (reading.recentMedications ?? []).map((m) => ({
+    name: m.name,
+    med_class: m.med_class,
+    takenMinutesAgo: m.takenMinutesAgo,
+    dose: m.dose,
+  }));
+  const medCtx = assessMedicationContext(active);
+
+  if (medCtx.hypoRiskBoost && (state === "Trending Low" || state === "In Range – Falling")) {
+    // Recent fast-acting agent + already drifting down → take it more seriously.
+    urgency = urgency === "low" ? "medium" : "high";
+    suggestion =
+      "A small snack now would be wise while your medication is still working. Please check with your care team if you feel unwell.";
+  }
+
+  if (medCtx.notes.length > 0) {
+    message = `${message} ${medCtx.notes.join(" ")}`.trim();
+  }
+
   return {
     state,
     urgency,
     message,
-    suggestion
+    suggestion,
   };
 }
 

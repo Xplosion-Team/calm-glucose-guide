@@ -178,6 +178,41 @@ export function useGlucoseData() {
     if (!reading) reading = generateDemoReading();
     setIsDexcom(isLive);
 
+    // Pull recent medication events (last 24h) so the interpreter can
+    // factor in insulin / oral agents that are still working.
+    try {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: evs } = await supabase
+        .from("medication_events")
+        .select("taken_at, dose, medication_id")
+        .gte("taken_at", since)
+        .order("taken_at", { ascending: false })
+        .limit(20);
+      if (evs && evs.length > 0) {
+        const medIds = Array.from(new Set(evs.map((e) => e.medication_id)));
+        const { data: meds } = await supabase
+          .from("medications")
+          .select("id, name, med_class")
+          .in("id", medIds);
+        const medMap = new Map((meds ?? []).map((m) => [m.id, m]));
+        const now = Date.now();
+        reading.recentMedications = evs
+          .map((e) => {
+            const m = medMap.get(e.medication_id);
+            if (!m) return null;
+            return {
+              name: m.name,
+              med_class: m.med_class as NonNullable<GlucoseReading["recentMedications"]>[number]["med_class"],
+              takenMinutesAgo: Math.max(0, (now - new Date(e.taken_at).getTime()) / 60000),
+              dose: e.dose,
+            };
+          })
+          .filter((x): x is NonNullable<typeof x> => x !== null);
+      }
+    } catch (err) {
+      console.warn("medication_events fetch error:", err);
+    }
+
     // Try to get user profile from database
     const { data: profile } = await supabase
       .from("profiles")
