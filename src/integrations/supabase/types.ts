@@ -485,6 +485,81 @@ export type Database = {
         }
         Relationships: []
       }
+      t1pal_connections: {
+        Row: {
+          access_token_encrypted: string | null
+          created_at: string
+          id: string
+          last_error: string | null
+          last_successful_reading_at: string | null
+          last_sync_at: string | null
+          status: string
+          t1pal_url: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token_encrypted?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_successful_reading_at?: string | null
+          last_sync_at?: string | null
+          status?: string
+          t1pal_url: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token_encrypted?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_successful_reading_at?: string | null
+          last_sync_at?: string | null
+          status?: string
+          t1pal_url?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      t1pal_ingestion_logs: {
+        Row: {
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          latency_ms: number | null
+          readings_fetched: number
+          readings_inserted: number
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          latency_ms?: number | null
+          readings_fetched?: number
+          readings_inserted?: number
+          started_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          latency_ms?: number | null
+          readings_fetched?: number
+          readings_inserted?: number
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       trial_enrollments: {
         Row: {
           arm: string | null

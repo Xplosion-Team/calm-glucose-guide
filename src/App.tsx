@@ -10,6 +10,9 @@ import DexcomCallback from "./pages/DexcomCallback";
 import NotFound from "./pages/NotFound";
 import { NIGHTSCOUT_ENABLED, NIGHTSCOUT_SETTINGS_PATH } from "./integrations/nightscout/featureFlag";
 import NightscoutSettingsPage from "./components/settings/nightscout/NightscoutSettingsPage";
+import { T1PAL_ENABLED, T1PAL_SETTINGS_PATH } from "./integrations/t1pal/featureFlag";
+import T1PalSettingsPage from "./components/settings/t1pal/T1PalSettingsPage";
+
 
 const queryClient = new QueryClient();
 
@@ -27,6 +30,10 @@ const App = () => (
             {NIGHTSCOUT_ENABLED && (
               <Route path={NIGHTSCOUT_SETTINGS_PATH} element={<NightscoutSettingsPage />} />
             )}
+            {T1PAL_ENABLED && (
+              <Route path={T1PAL_SETTINGS_PATH} element={<T1PalSettingsPage />} />
+            )}
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
