@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NightscoutConnectSection } from "@/components/settings/nightscout/NightscoutSettingsPage";
+import { T1PalConnectSection } from "@/components/settings/t1pal/T1PalSettingsPage";
 import { MetricCard } from "@/components/health/MetricCard";
 import { useHealthKit } from "@/hooks/useHealthKit";
 import { DEFAULT_METRICS } from "@/services/health";
@@ -25,13 +25,13 @@ export function HealthTab() {
       <header className="space-y-2">
         <h2 className="text-2xl font-semibold text-foreground">Your health today</h2>
         <p className="text-muted-foreground">
-          A gentle picture of how your body is doing — connect your Dexcom through
-          Nightscout to keep your readings in sync.
+          A gentle picture of how your body is doing — connect T1Pal to keep
+          your readings in sync.
         </p>
       </header>
 
-      {/* Connect Dexcom via Nightscout */}
-      <NightscoutConnectSection />
+      {/* Connect T1Pal */}
+      <T1PalConnectSection />
 
       {/* Today summary */}
       <section aria-labelledby="today-heading" className="space-y-3">
