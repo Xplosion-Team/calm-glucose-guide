@@ -118,7 +118,17 @@ export function T1PalConnectSection() {
               )}
               {conn.last_successful_reading_at && (
                 <p className="text-sm text-muted-foreground">
-                  Last reading: {new Date(conn.last_successful_reading_at).toLocaleString()}
+                  Last CGM sync: {new Date(conn.last_successful_reading_at).toLocaleString()}
+                </p>
+              )}
+              {conn.last_insulin_sync_at && (
+                <p className="text-sm text-muted-foreground">
+                  Last insulin sync: {new Date(conn.last_insulin_sync_at).toLocaleString()}
+                </p>
+              )}
+              {conn.last_meal_sync_at && (
+                <p className="text-sm text-muted-foreground">
+                  Last meal sync: {new Date(conn.last_meal_sync_at).toLocaleString()}
                 </p>
               )}
               {conn.last_error && (
