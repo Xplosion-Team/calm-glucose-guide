@@ -140,6 +140,75 @@ export type Database = {
         }
         Relationships: []
       }
+      insulin_events: {
+        Row: {
+          created_at: string
+          event_type: string | null
+          id: string
+          insulin_type: string | null
+          insulin_units: number
+          raw_payload: Json | null
+          source: string
+          ts: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type?: string | null
+          id?: string
+          insulin_type?: string | null
+          insulin_units: number
+          raw_payload?: Json | null
+          source?: string
+          ts: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string | null
+          id?: string
+          insulin_type?: string | null
+          insulin_units?: number
+          raw_payload?: Json | null
+          source?: string
+          ts?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      meal_events: {
+        Row: {
+          carbohydrates: number
+          created_at: string
+          event_type: string | null
+          id: string
+          raw_payload: Json | null
+          source: string
+          ts: string
+          user_id: string
+        }
+        Insert: {
+          carbohydrates: number
+          created_at?: string
+          event_type?: string | null
+          id?: string
+          raw_payload?: Json | null
+          source?: string
+          ts: string
+          user_id: string
+        }
+        Update: {
+          carbohydrates?: number
+          created_at?: string
+          event_type?: string | null
+          id?: string
+          raw_payload?: Json | null
+          source?: string
+          ts?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       meal_logs: {
         Row: {
           carbs_g: number | null
@@ -491,6 +560,8 @@ export type Database = {
           created_at: string
           id: string
           last_error: string | null
+          last_insulin_sync_at: string | null
+          last_meal_sync_at: string | null
           last_successful_reading_at: string | null
           last_sync_at: string | null
           status: string
@@ -503,6 +574,8 @@ export type Database = {
           created_at?: string
           id?: string
           last_error?: string | null
+          last_insulin_sync_at?: string | null
+          last_meal_sync_at?: string | null
           last_successful_reading_at?: string | null
           last_sync_at?: string | null
           status?: string
@@ -515,6 +588,8 @@ export type Database = {
           created_at?: string
           id?: string
           last_error?: string | null
+          last_insulin_sync_at?: string | null
+          last_meal_sync_at?: string | null
           last_successful_reading_at?: string | null
           last_sync_at?: string | null
           status?: string
@@ -529,7 +604,11 @@ export type Database = {
           error_message: string | null
           finished_at: string | null
           id: string
+          insulin_fetched: number | null
+          insulin_inserted: number | null
           latency_ms: number | null
+          meals_fetched: number | null
+          meals_inserted: number | null
           readings_fetched: number
           readings_inserted: number
           started_at: string
@@ -540,7 +619,11 @@ export type Database = {
           error_message?: string | null
           finished_at?: string | null
           id?: string
+          insulin_fetched?: number | null
+          insulin_inserted?: number | null
           latency_ms?: number | null
+          meals_fetched?: number | null
+          meals_inserted?: number | null
           readings_fetched?: number
           readings_inserted?: number
           started_at?: string
@@ -551,7 +634,11 @@ export type Database = {
           error_message?: string | null
           finished_at?: string | null
           id?: string
+          insulin_fetched?: number | null
+          insulin_inserted?: number | null
           latency_ms?: number | null
+          meals_fetched?: number | null
+          meals_inserted?: number | null
           readings_fetched?: number
           readings_inserted?: number
           started_at?: string

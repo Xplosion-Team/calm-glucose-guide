@@ -7,6 +7,8 @@ export interface T1PalConnection {
   status: string;
   last_sync_at: string | null;
   last_successful_reading_at: string | null;
+  last_insulin_sync_at: string | null;
+  last_meal_sync_at: string | null;
   last_error: string | null;
 }
 
@@ -26,7 +28,7 @@ export function normalizeT1PalUrl(url: string): string {
 export async function getT1PalConnection(): Promise<T1PalConnection | null> {
   const { data } = await (supabase as any)
     .from("t1pal_connections")
-    .select("id, user_id, t1pal_url, status, last_sync_at, last_successful_reading_at, last_error")
+    .select("id, user_id, t1pal_url, status, last_sync_at, last_successful_reading_at, last_insulin_sync_at, last_meal_sync_at, last_error")
     .maybeSingle();
   return (data as T1PalConnection | null) ?? null;
 }
