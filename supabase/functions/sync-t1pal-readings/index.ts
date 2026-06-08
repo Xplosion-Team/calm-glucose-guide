@@ -1,6 +1,7 @@
-// T1Pal: pull recent CGM entries for the authenticated user (or all active
-// connections when invoked with a service token on schedule) and append them
-// to cgm_readings with source = 't1pal'. Isolated and idempotent.
+// T1Pal: pull recent CGM entries AND treatments (insulin + meals) for the
+// authenticated user (or all active connections when invoked with x-scheduled).
+// Appends glucose to cgm_readings (source='t1pal'), insulin to insulin_events,
+// carbs to meal_events. Isolated and idempotent.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -15,6 +16,18 @@ interface NSEntry {
   date?: number;
   direction?: string;
   device?: string;
+}
+
+interface NSTreatment {
+  eventType?: string;
+  insulin?: number | null;
+  carbs?: number | null;
+  created_at?: string;
+  timestamp?: string | number;
+  date?: number;
+  insulinType?: string;
+  notes?: string;
+  [k: string]: unknown;
 }
 
 function mapDirection(dir?: string): string | null {
@@ -57,6 +70,26 @@ function safeUrl(baseUrl: string): string | null {
   }
 }
 
+function treatmentTimeMs(t: NSTreatment): number | null {
+  if (typeof t.date === "number" && t.date > 0) return t.date;
+  const raw = t.created_at ?? t.timestamp;
+  if (!raw) return null;
+  const ms = typeof raw === "number" ? raw : Date.parse(String(raw));
+  return Number.isFinite(ms) && ms > 0 ? ms : null;
+}
+
+async function fetchJson(url: string, timeoutMs = 15_000): Promise<unknown> {
+  const c = new AbortController();
+  const t = setTimeout(() => c.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { headers: { accept: "application/json" }, signal: c.signal });
+    if (!res.ok) throw new Error(`T1Pal responded ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 async function syncOneConnection(
   serviceClient: ReturnType<typeof createClient>,
   conn: {
@@ -64,8 +97,18 @@ async function syncOneConnection(
     t1pal_url: string;
     access_token_encrypted: string | null;
     last_sync_at: string | null;
+    last_insulin_sync_at?: string | null;
+    last_meal_sync_at?: string | null;
   },
-): Promise<{ fetched: number; inserted: number; error?: string }> {
+): Promise<{
+  fetched: number;
+  inserted: number;
+  insulin_fetched: number;
+  insulin_inserted: number;
+  meals_fetched: number;
+  meals_inserted: number;
+  error?: string;
+}> {
   const started = Date.now();
   const { data: logRow } = await serviceClient
     .from("t1pal_ingestion_logs")
@@ -74,56 +117,81 @@ async function syncOneConnection(
     .single();
   const logId = (logRow as { id?: string } | null)?.id;
 
-  const finish = async (status: "ok" | "error", fetched: number, inserted: number, error?: string) => {
+  const finish = async (
+    status: "ok" | "error",
+    counts: {
+      fetched: number;
+      inserted: number;
+      insulin_fetched: number;
+      insulin_inserted: number;
+      meals_fetched: number;
+      meals_inserted: number;
+    },
+    error?: string,
+  ) => {
     if (!logId) return;
     await serviceClient
       .from("t1pal_ingestion_logs")
       .update({
         finished_at: new Date().toISOString(),
         status,
-        readings_fetched: fetched,
-        readings_inserted: inserted,
+        readings_fetched: counts.fetched,
+        readings_inserted: counts.inserted,
+        insulin_fetched: counts.insulin_fetched,
+        insulin_inserted: counts.insulin_inserted,
+        meals_fetched: counts.meals_fetched,
+        meals_inserted: counts.meals_inserted,
         latency_ms: Date.now() - started,
         error_message: error ?? null,
       })
       .eq("id", logId);
   };
 
+  const zero = {
+    fetched: 0,
+    inserted: 0,
+    insulin_fetched: 0,
+    insulin_inserted: 0,
+    meals_fetched: 0,
+    meals_inserted: 0,
+  };
+
   const baseUrl = safeUrl(conn.t1pal_url);
   if (!baseUrl) {
-    await serviceClient.from("t1pal_connections").update({ status: "connection_error", last_error: "Invalid URL" }).eq("user_id", conn.user_id);
-    await finish("error", 0, 0, "Invalid URL");
-    return { fetched: 0, inserted: 0, error: "Invalid URL" };
+    await serviceClient
+      .from("t1pal_connections")
+      .update({ status: "connection_error", last_error: "Invalid URL" })
+      .eq("user_id", conn.user_id);
+    await finish("error", zero, "Invalid URL");
+    return { ...zero, error: "Invalid URL" };
   }
 
-  const since = conn.last_sync_at ? new Date(conn.last_sync_at).getTime() : Date.now() - 24 * 60 * 60 * 1000;
-  let url = `${baseUrl}/api/v1/entries.json?count=288&find[date][$gt]=${since}`;
-  if (conn.access_token_encrypted) url += `&token=${encodeURIComponent(conn.access_token_encrypted)}`;
+  const tokenQS = conn.access_token_encrypted
+    ? `&token=${encodeURIComponent(conn.access_token_encrypted)}`
+    : "";
 
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 15_000);
-  let res: Response;
+  // ---------- CGM entries ----------
+  const sinceCgm = conn.last_sync_at
+    ? new Date(conn.last_sync_at).getTime()
+    : Date.now() - 24 * 60 * 60 * 1000;
+  const entriesUrl = `${baseUrl}/api/v1/entries.json?count=288&find[date][$gt]=${sinceCgm}${tokenQS}`;
+
+  let entries: NSEntry[] = [];
   try {
-    res = await fetch(url, { headers: { accept: "application/json" }, signal: controller.signal });
+    entries = (await fetchJson(entriesUrl)) as NSEntry[];
+    if (!Array.isArray(entries)) entries = [];
   } catch (e) {
-    clearTimeout(t);
     const msg = (e as Error).message;
-    await serviceClient.from("t1pal_connections").update({ status: "connection_error", last_error: msg }).eq("user_id", conn.user_id);
-    await finish("error", 0, 0, msg);
-    return { fetched: 0, inserted: 0, error: msg };
-  }
-  clearTimeout(t);
-
-  if (!res.ok) {
-    const msg = `T1Pal responded ${res.status}`;
-    await serviceClient.from("t1pal_connections").update({ status: "connection_error", last_error: msg }).eq("user_id", conn.user_id);
-    await finish("error", 0, 0, msg);
-    return { fetched: 0, inserted: 0, error: msg };
+    await serviceClient
+      .from("t1pal_connections")
+      .update({ status: "connection_error", last_error: msg })
+      .eq("user_id", conn.user_id);
+    await finish("error", zero, msg);
+    return { ...zero, error: msg };
   }
 
-  const entries: NSEntry[] = await res.json().catch(() => []);
   const nowMs = Date.now();
-  const valid = entries.filter(
+  const validEntries = entries.filter(
     (e) =>
       typeof e.sgv === "number" &&
       e.sgv >= 20 &&
@@ -133,19 +201,17 @@ async function syncOneConnection(
       e.date <= nowMs + 60_000,
   );
 
-  let inserted = 0;
+  let insertedCgm = 0;
   let latestReading: string | null = null;
-
-  if (valid.length > 0) {
-    const tsList = valid.map((e) => new Date(e.date!).toISOString());
+  if (validEntries.length > 0) {
+    const tsList = validEntries.map((e) => new Date(e.date!).toISOString());
     const { data: existing } = await serviceClient
       .from("cgm_readings")
       .select("ts")
       .eq("user_id", conn.user_id)
       .in("ts", tsList);
     const existingSet = new Set((existing as { ts: string }[] | null)?.map((r) => r.ts) ?? []);
-
-    const rows = valid
+    const rows = validEntries
       .map((e) => ({
         user_id: conn.user_id,
         ts: new Date(e.date!).toISOString(),
@@ -154,16 +220,108 @@ async function syncOneConnection(
         source: "t1pal",
       }))
       .filter((r) => !existingSet.has(r.ts));
-
     if (rows.length > 0) {
       const { error: insErr } = await serviceClient.from("cgm_readings").insert(rows);
       if (insErr) {
-        await finish("error", valid.length, 0, insErr.message);
-        return { fetched: valid.length, inserted: 0, error: insErr.message };
+        await finish("error", { ...zero, fetched: validEntries.length }, insErr.message);
+        return { ...zero, fetched: validEntries.length, error: insErr.message };
       }
-      inserted = rows.length;
+      insertedCgm = rows.length;
     }
-    latestReading = new Date(Math.max(...valid.map((e) => e.date!))).toISOString();
+    latestReading = new Date(Math.max(...validEntries.map((e) => e.date!))).toISOString();
+  }
+
+  // ---------- Treatments (insulin + meals) ----------
+  const sinceTreat = Math.min(
+    conn.last_insulin_sync_at ? new Date(conn.last_insulin_sync_at).getTime() : Infinity,
+    conn.last_meal_sync_at ? new Date(conn.last_meal_sync_at).getTime() : Infinity,
+    Date.now() - 24 * 60 * 60 * 1000,
+  );
+  const sinceIso = new Date(sinceTreat).toISOString();
+  const treatmentsUrl =
+    `${baseUrl}/api/v1/treatments.json?count=500` +
+    `&find[created_at][$gte]=${encodeURIComponent(sinceIso)}${tokenQS}`;
+
+  let insulinFetched = 0;
+  let insulinInserted = 0;
+  let mealsFetched = 0;
+  let mealsInserted = 0;
+  let latestInsulin: string | null = null;
+  let latestMeal: string | null = null;
+
+  try {
+    const treatments = (await fetchJson(treatmentsUrl)) as NSTreatment[];
+    const list = Array.isArray(treatments) ? treatments : [];
+
+    const insulinRows: Array<{
+      user_id: string;
+      ts: string;
+      insulin_units: number;
+      insulin_type: string | null;
+      event_type: string | null;
+      source: string;
+      raw_payload: NSTreatment;
+    }> = [];
+    const mealRows: Array<{
+      user_id: string;
+      ts: string;
+      carbohydrates: number;
+      event_type: string | null;
+      source: string;
+      raw_payload: NSTreatment;
+    }> = [];
+
+    for (const t of list) {
+      const ms = treatmentTimeMs(t);
+      if (!ms || ms > nowMs + 60_000) continue;
+      const iso = new Date(ms).toISOString();
+
+      if (typeof t.insulin === "number" && t.insulin > 0 && t.insulin <= 100) {
+        insulinFetched++;
+        insulinRows.push({
+          user_id: conn.user_id,
+          ts: iso,
+          insulin_units: t.insulin,
+          insulin_type: typeof t.insulinType === "string" ? t.insulinType : null,
+          event_type: typeof t.eventType === "string" ? t.eventType : null,
+          source: "t1pal",
+          raw_payload: t,
+        });
+        if (!latestInsulin || iso > latestInsulin) latestInsulin = iso;
+      }
+
+      if (typeof t.carbs === "number" && t.carbs > 0 && t.carbs <= 500) {
+        mealsFetched++;
+        mealRows.push({
+          user_id: conn.user_id,
+          ts: iso,
+          carbohydrates: t.carbs,
+          event_type: typeof t.eventType === "string" ? t.eventType : null,
+          source: "t1pal",
+          raw_payload: t,
+        });
+        if (!latestMeal || iso > latestMeal) latestMeal = iso;
+      }
+    }
+
+    // Dedupe via upsert on natural unique key.
+    if (insulinRows.length > 0) {
+      const { error: insErr, count } = await serviceClient
+        .from("insulin_events")
+        .upsert(insulinRows, { onConflict: "user_id,ts,insulin_units,source", ignoreDuplicates: true, count: "exact" });
+      if (insErr) throw insErr;
+      insulinInserted = count ?? insulinRows.length;
+    }
+    if (mealRows.length > 0) {
+      const { error: mErr, count } = await serviceClient
+        .from("meal_events")
+        .upsert(mealRows, { onConflict: "user_id,ts,carbohydrates,source", ignoreDuplicates: true, count: "exact" });
+      if (mErr) throw mErr;
+      mealsInserted = count ?? mealRows.length;
+    }
+  } catch (e) {
+    // Treatments are optional — log but don't fail the whole sync.
+    console.warn("T1Pal treatments sync error:", (e as Error).message);
   }
 
   const nowIso = new Date().toISOString();
@@ -173,12 +331,22 @@ async function syncOneConnection(
       status: "connected",
       last_sync_at: nowIso,
       last_successful_reading_at: latestReading ?? conn.last_sync_at,
+      last_insulin_sync_at: latestInsulin ?? conn.last_insulin_sync_at ?? null,
+      last_meal_sync_at: latestMeal ?? conn.last_meal_sync_at ?? null,
       last_error: null,
     })
     .eq("user_id", conn.user_id);
 
-  await finish("ok", valid.length, inserted);
-  return { fetched: valid.length, inserted };
+  const counts = {
+    fetched: validEntries.length,
+    inserted: insertedCgm,
+    insulin_fetched: insulinFetched,
+    insulin_inserted: insulinInserted,
+    meals_fetched: mealsFetched,
+    meals_inserted: mealsInserted,
+  };
+  await finish("ok", counts);
+  return counts;
 }
 
 Deno.serve(async (req) => {
@@ -194,10 +362,9 @@ Deno.serve(async (req) => {
 
   try {
     if (isScheduled) {
-      // Scheduled cron path: iterate all active connections.
       const { data: conns } = await serviceClient
         .from("t1pal_connections")
-        .select("user_id, t1pal_url, access_token_encrypted, last_sync_at")
+        .select("user_id, t1pal_url, access_token_encrypted, last_sync_at, last_insulin_sync_at, last_meal_sync_at")
         .neq("status", "disabled");
       let total = 0;
       for (const c of (conns ?? []) as any[]) {
@@ -210,7 +377,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // User-invoked path.
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Missing authorization" }), {
         status: 401,
@@ -233,7 +399,7 @@ Deno.serve(async (req) => {
 
     const { data: conn } = await serviceClient
       .from("t1pal_connections")
-      .select("user_id, t1pal_url, access_token_encrypted, last_sync_at")
+      .select("user_id, t1pal_url, access_token_encrypted, last_sync_at, last_insulin_sync_at, last_meal_sync_at")
       .eq("user_id", userId)
       .maybeSingle();
 
