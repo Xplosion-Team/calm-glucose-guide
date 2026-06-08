@@ -7,6 +7,8 @@ export interface T1PalConnection {
   status: string;
   last_sync_at: string | null;
   last_successful_reading_at: string | null;
+  last_insulin_sync_at: string | null;
+  last_meal_sync_at: string | null;
   last_error: string | null;
 }
 
