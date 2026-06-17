@@ -99,7 +99,7 @@ function parseHealthKitGlucose(records: HealthRecord[]): GlucoseReading | null {
     recentMeal: false,
     recentActivity: false,
     timeOfDay: getTimeOfDay(),
-    timestamp: latest.startDate,
+    timestamp: new Date(),
   };
 }
 
@@ -165,7 +165,7 @@ export function useGlucoseData() {
           recentMeal: false,
           recentActivity: false,
           timeOfDay: getTimeOfDay(),
-          timestamp: new Date(latest.ts),
+          timestamp: new Date(),
         };
         isLive = true;
       }
