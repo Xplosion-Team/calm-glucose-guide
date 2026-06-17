@@ -165,7 +165,7 @@ export function useGlucoseData() {
           recentMeal: false,
           recentActivity: false,
           timeOfDay: getTimeOfDay(),
-          timestamp: new Date(latest.ts),
+          timestamp: new Date(),
         };
         isLive = true;
       }
