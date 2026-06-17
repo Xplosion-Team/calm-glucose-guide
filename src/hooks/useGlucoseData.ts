@@ -133,8 +133,13 @@ export function useGlucoseData() {
     let reading: GlucoseReading | null = null;
     let isLive = false;
     try {
-      // Trigger a background Nightscout sync (best-effort, ignore errors).
-      supabase.functions.invoke("nightscout-sync", { body: {} }).catch(() => {});
+      // Trigger Nightscout + T1Pal syncs so "Check again" pulls the
+      // freshest readings before we query cgm_readings. Best-effort:
+      // failures are ignored so demo/fallback data still works.
+      await Promise.allSettled([
+        supabase.functions.invoke("nightscout-sync", { body: {} }),
+        supabase.functions.invoke("sync-t1pal-readings", { body: {} }),
+      ]);
 
       const { data: cgm } = await supabase
         .from("cgm_readings")
