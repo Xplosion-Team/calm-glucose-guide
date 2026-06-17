@@ -99,7 +99,7 @@ function parseHealthKitGlucose(records: HealthRecord[]): GlucoseReading | null {
     recentMeal: false,
     recentActivity: false,
     timeOfDay: getTimeOfDay(),
-    timestamp: latest.startDate,
+    timestamp: new Date(),
   };
 }
 
