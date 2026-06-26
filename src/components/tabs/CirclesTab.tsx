@@ -1,110 +1,90 @@
 import { useMemo, useState } from "react";
-import { Users, Heart, MessageCircle, UserPlus, Bell } from "lucide-react";
+import { Users, UserPlus, Pencil, Trash2, Phone, Mail, Stethoscope, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useScreenContext } from "@/hooks/useScreenContext";
 import { GamesSection } from "@/components/circles/GamesSection";
+import { PersonFormDialog } from "@/components/circles/PersonFormDialog";
+import { useCirclePeople, type CirclePerson } from "@/hooks/useCirclePeople";
 
-interface CircleMember {
-  id: string;
-  name: string;
-  role: string;
-  initials: string;
-  status: "online" | "away" | "offline";
-  lastShared?: string;
+function initialsOf(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("") || "?";
 }
-
-interface Update {
-  id: string;
-  who: string;
-  initials: string;
-  text: string;
-  when: string;
-  reactions: number;
-}
-
-const MEMBERS: CircleMember[] = [
-  { id: "1", name: "Dr. Patel", role: "Care team", initials: "DP", status: "online", lastShared: "Reviewed your week" },
-  { id: "2", name: "Sarah", role: "Daughter", initials: "S", status: "online", lastShared: "Sent a heart" },
-  { id: "3", name: "James", role: "Son", initials: "J", status: "away" },
-  { id: "4", name: "Margot", role: "Friend", initials: "M", status: "offline" },
-];
-
-const UPDATES: Update[] = [
-  {
-    id: "1",
-    who: "Sarah",
-    initials: "S",
-    text: "So proud of your steady week, Mom! ❤️",
-    when: "2h ago",
-    reactions: 3,
-  },
-  {
-    id: "2",
-    who: "Dr. Patel",
-    initials: "DP",
-    text: "Your overnight readings look beautiful. Keep doing what you're doing.",
-    when: "Yesterday",
-    reactions: 5,
-  },
-  {
-    id: "3",
-    who: "James",
-    initials: "J",
-    text: "Walked the dog with you in spirit this morning 🐕",
-    when: "2 days ago",
-    reactions: 2,
-  },
-];
 
 export function CirclesTab() {
   const { toast } = useToast();
-  const [reactedIds, setReactedIds] = useState<Set<string>>(new Set());
+  const { people, loading, addPerson, updatePerson, deletePerson } = useCirclePeople();
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<CirclePerson | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<CirclePerson | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useScreenContext(
-    useMemo(() => {
-      const onlineCount = MEMBERS.filter((m) => m.status === "online").length;
-      const latest = UPDATES[0];
-      return {
+    useMemo(
+      () => ({
         screen: "Circles",
-        status: `You have ${MEMBERS.length} people in your circle, ${onlineCount} online right now.`,
-        highlights: [
-          `Latest update: ${latest.who} said, "${latest.text}"`,
-          `Dr. Patel reviewed your week.`,
-          `You can invite someone new to your circle from this screen.`,
-        ],
-        data: { members: MEMBERS.length, online: onlineCount, updates: UPDATES.length },
-        fallback: `You're on the Circles screen. You have ${MEMBERS.length} people in your circle, and ${onlineCount} are online. Your latest update is from ${latest.who}. Want more detail?`,
-      };
-    }, []),
+        status:
+          people.length === 0
+            ? "Your circle is empty. You can add the people who support you."
+            : `You have ${people.length} ${people.length === 1 ? "person" : "people"} in your circle.`,
+        highlights: people.slice(0, 3).map((p) => `${p.full_name}${p.relationship ? ` — ${p.relationship}` : p.role ? ` — ${p.role}` : ""}`),
+        data: { count: people.length },
+        fallback:
+          people.length === 0
+            ? "You're on the Circles screen. There is no one in your circle yet. Want to add someone?"
+            : `You're on the Circles screen with ${people.length} trusted people.`,
+      }),
+      [people],
+    ),
   );
 
-  const handleReact = (id: string) => {
-    setReactedIds((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  const openAdd = () => {
+    setEditing(null);
+    setFormOpen(true);
+  };
+  const openEdit = (p: CirclePerson) => {
+    setEditing(p);
+    setFormOpen(true);
   };
 
-  const handleInvite = () => {
-    toast({
-      title: "Invite link copied",
-      description: "Share it with someone you trust to add them to your circle.",
-    });
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      await deletePerson(confirmDelete.id);
+      toast({ title: "Person removed", description: `${confirmDelete.full_name} was deleted.` });
+      setConfirmDelete(null);
+    } catch (e) {
+      toast({
+        title: "Could not delete",
+        description: e instanceof Error ? e.message : "Try again",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+    }
   };
-
-  const statusColor = {
-    online: "bg-status-stable",
-    away: "bg-status-rising",
-    offline: "bg-muted-foreground/40",
-  } as const;
 
   return (
     <div className="space-y-6 animate-fade-in pb-4">
-      {/* Hero */}
       <div className="text-center py-4">
         <div className="inline-flex items-center gap-2 mb-2">
           <Users className="w-6 h-6 text-primary" aria-hidden="true" />
@@ -115,100 +95,141 @@ export function CirclesTab() {
         </p>
       </div>
 
-      {/* Members */}
       <Card className="glass-card border-0">
         <CardContent className="p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold text-foreground">Trusted people</h3>
-            <Button variant="ghost" size="sm" onClick={handleInvite} className="gap-1.5 text-primary">
+            <Button size="sm" onClick={openAdd} className="gap-1.5">
               <UserPlus className="w-4 h-4" aria-hidden="true" />
-              Invite
+              Add person
             </Button>
           </div>
 
-          <div className="space-y-3">
-            {MEMBERS.map((m) => (
-              <div key={m.id} className="flex items-center gap-3">
-                <div className="relative">
-                  <Avatar className="w-12 h-12">
-                    <AvatarFallback className="bg-secondary text-secondary-foreground font-semibold">
-                      {m.initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span
-                    className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ring-2 ring-card ${statusColor[m.status]}`}
-                    aria-label={m.status}
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground truncate">{m.name}</p>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {m.lastShared ?? m.role}
-                  </p>
-                </div>
-                <Button variant="ghost" size="icon" aria-label={`Message ${m.name}`}>
-                  <MessageCircle className="w-5 h-5" />
-                </Button>
+          {loading ? (
+            <div className="flex items-center justify-center py-10 text-muted-foreground">
+              <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading…
+            </div>
+          ) : people.length === 0 ? (
+            <div className="text-center py-10 space-y-3">
+              <div className="mx-auto w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
+                <Users className="w-6 h-6 text-muted-foreground" />
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Activity feed */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <h3 className="text-base font-semibold text-foreground">Recent love</h3>
-          <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
-            <Bell className="w-4 h-4" aria-hidden="true" />
-            Quiet hours
-          </Button>
-        </div>
-
-        {UPDATES.map((u) => {
-          const reacted = reactedIds.has(u.id);
-          const count = u.reactions + (reacted ? 1 : 0);
-          return (
-            <Card key={u.id} className="glass-card border-0">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <Avatar className="w-10 h-10">
-                    <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                      {u.initials}
+              <p className="text-base font-medium">No one in your circle yet</p>
+              <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                Add family, friends, or your Greens Health care team to keep them in the loop.
+              </p>
+              <Button onClick={openAdd} className="gap-1.5">
+                <UserPlus className="w-4 h-4" />
+                Add your first person
+              </Button>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {people.map((p) => (
+                <li key={p.id} className="flex items-start gap-3 rounded-lg p-2 hover:bg-muted/40">
+                  <Avatar className="w-12 h-12">
+                    <AvatarFallback
+                      className={
+                        p.is_greens_health
+                          ? "bg-primary/10 text-primary font-semibold"
+                          : "bg-secondary text-secondary-foreground font-semibold"
+                      }
+                    >
+                      {initialsOf(p.full_name)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2">
-                      <p className="font-semibold text-foreground">{u.who}</p>
-                      <span className="text-xs text-muted-foreground">{u.when}</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium text-foreground truncate">{p.full_name}</p>
+                      {p.is_greens_health && (
+                        <Badge variant="secondary" className="gap-1">
+                          <Stethoscope className="w-3 h-3" /> Greens Health
+                        </Badge>
+                      )}
                     </div>
-                    <p className="text-base text-foreground leading-relaxed mt-1">{u.text}</p>
-                    <button
-                      onClick={() => handleReact(u.id)}
-                      className={`mt-2 inline-flex items-center gap-1.5 text-sm font-medium transition-colors ${
-                        reacted ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                      }`}
-                      aria-pressed={reacted}
-                    >
-                      <Heart
-                        className={`w-4 h-4 ${reacted ? "fill-current" : ""}`}
-                        aria-hidden="true"
-                      />
-                      {count}
-                    </button>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {p.is_greens_health
+                        ? [p.role, p.organization].filter(Boolean).join(" • ") || "Care team"
+                        : p.relationship || "Trusted contact"}
+                    </p>
+                    <div className="flex flex-wrap gap-3 mt-1 text-xs text-muted-foreground">
+                      {p.phone && (
+                        <span className="inline-flex items-center gap-1">
+                          <Phone className="w-3 h-3" /> {p.phone}
+                        </span>
+                      )}
+                      {p.email && (
+                        <span className="inline-flex items-center gap-1">
+                          <Mail className="w-3 h-3" /> {p.email}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                  <div className="flex flex-col gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEdit(p)}
+                      aria-label={`Edit ${p.full_name}`}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setConfirmDelete(p)}
+                      aria-label={`Delete ${p.full_name}`}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
       <GamesSection />
 
       <p className="text-center text-sm text-muted-foreground max-w-sm mx-auto pt-4 border-t">
         You decide what your circle sees. Your data stays yours.
       </p>
+
+      <PersonFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        person={editing}
+        onSubmit={async (input) => {
+          if (editing) await updatePerson(editing.id, input);
+          else await addPerson(input);
+        }}
+      />
+
+      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {confirmDelete?.full_name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this person from your circle. You can always add them again later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Removing…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
