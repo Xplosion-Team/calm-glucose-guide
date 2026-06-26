@@ -19,6 +19,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { useScreenContext } from "@/hooks/useScreenContext";
 
 interface CurvePt { t_min: number; mg_dl: number; lo: number; hi: number }
+interface DataSources {
+  cgm: {
+    baseline_mg_dl: number;
+    trend_mg_dl_per_min: number;
+    last_reading_age_min: number | null;
+    readings_used: number;
+    source: "t1pal" | "client_override" | "none";
+  };
+  t1pal: { status: string; last_sync_at: string | null; last_reading_at: string | null } | null;
+  medications: {
+    count_prescribed: number;
+    active: { name: string; med_class: string; on_board: boolean; taken_minutes_ago: number | null }[];
+    reasons: string[];
+  };
+  required_inputs_missing: string[];
+}
 interface PredictResult {
   prediction_id: string;
   model_version: string;
@@ -29,6 +45,13 @@ interface PredictResult {
   confidence: number;
   curve: CurvePt[];
   insight_text: string;
+  data_sources?: DataSources;
+  explanations?: {
+    baseline_from: string;
+    medication_reasons: string[];
+    hypo_risk_boost: boolean;
+    required_inputs_missing: string[];
+  };
 }
 
 interface Props { currentGlucose: number }
@@ -194,6 +217,48 @@ export function PostprandialForecast({ currentGlucose }: Props) {
               <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
               Estimate only, not medical advice. Always follow your care team's guidance. Model {result.model_version}.
             </p>
+
+            {result.data_sources && (
+              <div className="rounded-xl border border-border/50 p-3 space-y-2 text-sm">
+                <p className="font-medium text-foreground">What this forecast used</p>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li>
+                    {result.data_sources.cgm.source === "t1pal" ? (
+                      <>
+                        Baseline {Math.round(result.data_sources.cgm.baseline_mg_dl)} mg/dL from your T1Pal CGM
+                        {result.data_sources.cgm.last_reading_age_min != null &&
+                          ` (${result.data_sources.cgm.last_reading_age_min} min ago, ${result.data_sources.cgm.readings_used} recent readings).`}
+                      </>
+                    ) : (
+                      <span className="text-destructive">
+                        No live T1Pal readings — using a safe placeholder. Connect T1Pal for a personalized forecast.
+                      </span>
+                    )}
+                  </li>
+                  <li>
+                    {result.data_sources.medications.count_prescribed === 0 ? (
+                      <span className="text-destructive">
+                        No medications on file — add yours so the model accounts for them.
+                      </span>
+                    ) : result.data_sources.medications.active.filter((m) => m.on_board).length === 0 ? (
+                      <>You have {result.data_sources.medications.count_prescribed} medication(s) on file, none active right now.</>
+                    ) : (
+                      <>
+                        Accounting for: {result.data_sources.medications.active.filter((m) => m.on_board).map((m) => m.name).join(", ")}.
+                      </>
+                    )}
+                  </li>
+                </ul>
+                {result.explanations?.medication_reasons?.length ? (
+                  <ul className="list-disc pl-5 text-xs text-muted-foreground space-y-0.5">
+                    {result.explanations.medication_reasons.map((r, i) => <li key={i}>{r}</li>)}
+                  </ul>
+                ) : null}
+                {result.explanations?.hypo_risk_boost && (
+                  <p className="text-xs text-destructive">Hypo watch: medications on board can lower glucose in the next few hours.</p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
