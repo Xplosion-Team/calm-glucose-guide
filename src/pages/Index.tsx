@@ -123,6 +123,8 @@ const Index = () => {
     finishTour,
     startTour,
     resetOnboarding,
+    dismissChecklist,
+    hideForever,
   } = useOnboarding();
 
   useEffect(() => {
