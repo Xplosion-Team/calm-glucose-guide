@@ -19,6 +19,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { useScreenContext } from "@/hooks/useScreenContext";
 
 interface CurvePt { t_min: number; mg_dl: number; lo: number; hi: number }
+interface DataSources {
+  cgm: {
+    baseline_mg_dl: number;
+    trend_mg_dl_per_min: number;
+    last_reading_age_min: number | null;
+    readings_used: number;
+    source: "t1pal" | "client_override" | "none";
+  };
+  t1pal: { status: string; last_sync_at: string | null; last_reading_at: string | null } | null;
+  medications: {
+    count_prescribed: number;
+    active: { name: string; med_class: string; on_board: boolean; taken_minutes_ago: number | null }[];
+    reasons: string[];
+  };
+  required_inputs_missing: string[];
+}
 interface PredictResult {
   prediction_id: string;
   model_version: string;
@@ -29,6 +45,13 @@ interface PredictResult {
   confidence: number;
   curve: CurvePt[];
   insight_text: string;
+  data_sources?: DataSources;
+  explanations?: {
+    baseline_from: string;
+    medication_reasons: string[];
+    hypo_risk_boost: boolean;
+    required_inputs_missing: string[];
+  };
 }
 
 interface Props { currentGlucose: number }
