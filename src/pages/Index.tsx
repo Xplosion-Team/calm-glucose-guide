@@ -165,6 +165,8 @@ const Index = () => {
           items={checklist}
           onStartTour={startTour}
           onResetChecklist={resetOnboarding}
+          onDismiss={dismissChecklist}
+          onHideForever={hideForever}
         />
       )}
 
