@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.send-checkin-sms]
 verify_jwt = false
+
+[functions.shared-progress]
+verify_jwt = false
