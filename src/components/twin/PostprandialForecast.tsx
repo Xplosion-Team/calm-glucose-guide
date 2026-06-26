@@ -217,6 +217,48 @@ export function PostprandialForecast({ currentGlucose }: Props) {
               <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
               Estimate only, not medical advice. Always follow your care team's guidance. Model {result.model_version}.
             </p>
+
+            {result.data_sources && (
+              <div className="rounded-xl border border-border/50 p-3 space-y-2 text-sm">
+                <p className="font-medium text-foreground">What this forecast used</p>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li>
+                    {result.data_sources.cgm.source === "t1pal" ? (
+                      <>
+                        Baseline {Math.round(result.data_sources.cgm.baseline_mg_dl)} mg/dL from your T1Pal CGM
+                        {result.data_sources.cgm.last_reading_age_min != null &&
+                          ` (${result.data_sources.cgm.last_reading_age_min} min ago, ${result.data_sources.cgm.readings_used} recent readings).`}
+                      </>
+                    ) : (
+                      <span className="text-destructive">
+                        No live T1Pal readings — using a safe placeholder. Connect T1Pal for a personalized forecast.
+                      </span>
+                    )}
+                  </li>
+                  <li>
+                    {result.data_sources.medications.count_prescribed === 0 ? (
+                      <span className="text-destructive">
+                        No medications on file — add yours so the model accounts for them.
+                      </span>
+                    ) : result.data_sources.medications.active.filter((m) => m.on_board).length === 0 ? (
+                      <>You have {result.data_sources.medications.count_prescribed} medication(s) on file, none active right now.</>
+                    ) : (
+                      <>
+                        Accounting for: {result.data_sources.medications.active.filter((m) => m.on_board).map((m) => m.name).join(", ")}.
+                      </>
+                    )}
+                  </li>
+                </ul>
+                {result.explanations?.medication_reasons?.length ? (
+                  <ul className="list-disc pl-5 text-xs text-muted-foreground space-y-0.5">
+                    {result.explanations.medication_reasons.map((r, i) => <li key={i}>{r}</li>)}
+                  </ul>
+                ) : null}
+                {result.explanations?.hypo_risk_boost && (
+                  <p className="text-xs text-destructive">Hypo watch: medications on board can lower glucose in the next few hours.</p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
