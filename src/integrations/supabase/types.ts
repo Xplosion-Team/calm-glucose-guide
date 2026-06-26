@@ -89,6 +89,59 @@ export type Database = {
         }
         Relationships: []
       }
+      circle_share_links: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          last_viewed_at: string | null
+          person_id: string
+          revoked_at: string | null
+          scope: string
+          status: string
+          token: string
+          updated_at: string
+          user_id: string
+          view_count: number
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          last_viewed_at?: string | null
+          person_id: string
+          revoked_at?: string | null
+          scope?: string
+          status?: string
+          token: string
+          updated_at?: string
+          user_id: string
+          view_count?: number
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          last_viewed_at?: string | null
+          person_id?: string
+          revoked_at?: string | null
+          scope?: string
+          status?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "circle_share_links_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "circle_people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consents: {
         Row: {
           id: string
