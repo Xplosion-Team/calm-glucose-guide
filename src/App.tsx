@@ -13,6 +13,7 @@ import NightscoutSettingsPage from "./components/settings/nightscout/NightscoutS
 import { T1PAL_ENABLED, T1PAL_SETTINGS_PATH } from "./integrations/t1pal/featureFlag";
 import T1PalSettingsPage from "./components/settings/t1pal/T1PalSettingsPage";
 import MedicationsPage from "./components/medications/MedicationsPage";
+import SharedProgressPage from "./pages/SharedProgress";
 
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
               <Route path={T1PAL_SETTINGS_PATH} element={<T1PalSettingsPage />} />
             )}
             <Route path="/medications" element={<MedicationsPage />} />
+            <Route path="/shared/:token" element={<SharedProgressPage />} />
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
