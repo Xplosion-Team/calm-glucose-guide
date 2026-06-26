@@ -44,6 +44,51 @@ export type Database = {
         }
         Relationships: []
       }
+      circle_people: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          is_greens_health: boolean
+          notes: string | null
+          organization: string | null
+          phone: string | null
+          relationship: string | null
+          role: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          is_greens_health?: boolean
+          notes?: string | null
+          organization?: string | null
+          phone?: string | null
+          relationship?: string | null
+          role?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_greens_health?: boolean
+          notes?: string | null
+          organization?: string | null
+          phone?: string | null
+          relationship?: string | null
+          role?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       consents: {
         Row: {
           id: string
