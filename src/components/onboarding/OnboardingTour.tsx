@@ -22,8 +22,8 @@ const NOW_STEPS: Step[] = [
   {
     target: '[data-tour="dexcom"]',
     content:
-      "Connect Apple Health (and your CGM if you wear one) so the app can learn from your activity, sleep, and glucose. You can also use it without connecting anything.",
-    title: "Connect your data",
+      "Connect to your T1Pal so insights use your real CGM, insulin, and meal data. This is a required setup step.",
+    title: "Connect to your T1Pal",
     placement: "bottom",
   },
   {
