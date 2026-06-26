@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Award, Calendar, Flame, TrendingUp, Sparkles, Activity, PlusCircle, Loader2 } from "lucide-react";
+import { Calendar, Flame, TrendingUp, Sparkles, Activity, PlusCircle, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
