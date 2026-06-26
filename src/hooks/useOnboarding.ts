@@ -1,11 +1,13 @@
 import { useState, useCallback, useEffect } from "react";
 import type { ChecklistItem } from "@/components/onboarding/OnboardingChecklist";
+import { supabase } from "@/integrations/supabase/client";
 
 const STORAGE_KEY = "calm-glucose-onboarding";
 
 interface OnboardingState {
   tourCompleted: boolean;
   dismissed: boolean;
+  hiddenForever: boolean;
   checklist: Record<string, boolean>;
 }
 
@@ -32,34 +34,91 @@ const DEFAULT_CHECKLIST: Omit<ChecklistItem, "completed">[] = [
   },
   {
     id: "connect_dexcom",
-    label: "Connect Apple Health or your CGM (optional)",
-    description: "Link Apple Health or Dexcom so insights use your real activity, sleep, and glucose instead of demo values.",
+    label: "Connect to your T1Pal",
+    description: "Connect your T1Pal account so insights use your real CGM, insulin, and meal data. This is a required setup step.",
   },
 ];
 
 function loadState(): OnboardingState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        tourCompleted: !!parsed.tourCompleted,
+        dismissed: !!parsed.dismissed,
+        hiddenForever: !!parsed.hiddenForever,
+        checklist: parsed.checklist ?? {},
+      };
+    }
   } catch {}
-  return { tourCompleted: false, dismissed: false, checklist: {} };
+  return { tourCompleted: false, dismissed: false, hiddenForever: false, checklist: {} };
 }
 
 function saveState(state: OnboardingState) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+async function persistHiddenToProfile(hidden: boolean) {
+  try {
+    const { data: userRes } = await supabase.auth.getUser();
+    const user = userRes?.user;
+    if (!user) return;
+    await (supabase as any)
+      .from("profiles")
+      .update({ onboarding_hidden: hidden })
+      .eq("user_id", user.id);
+  } catch {
+    // best-effort; localStorage already holds the preference
+  }
+}
+
 export function useOnboarding() {
   const [state, setState] = useState<OnboardingState>(loadState);
   const [tourRunning, setTourRunning] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
-  // Auto-start tour on first visit
+  // Hydrate hiddenForever from the user's profile (source of truth across devices)
   useEffect(() => {
-    if (!state.tourCompleted && !state.dismissed) {
-      const timer = setTimeout(() => setTourRunning(true), 1500);
-      return () => clearTimeout(timer);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: userRes } = await supabase.auth.getUser();
+        const user = userRes?.user;
+        if (!user) {
+          if (!cancelled) setProfileLoaded(true);
+          return;
+        }
+        const { data } = await (supabase as any)
+          .from("profiles")
+          .select("onboarding_hidden")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (cancelled) return;
+        if (data?.onboarding_hidden) {
+          setState((prev) => {
+            const next = { ...prev, hiddenForever: true, dismissed: true };
+            saveState(next);
+            return next;
+          });
+        }
+        setProfileLoaded(true);
+      } catch {
+        if (!cancelled) setProfileLoaded(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Auto-start tour on first visit (only if not hidden and profile finished loading)
+  useEffect(() => {
+    if (!profileLoaded) return;
+    if (state.hiddenForever || state.tourCompleted || state.dismissed) return;
+    const timer = setTimeout(() => setTourRunning(true), 1500);
+    return () => clearTimeout(timer);
+  }, [profileLoaded, state.hiddenForever, state.tourCompleted, state.dismissed]);
 
   const checklist: ChecklistItem[] = DEFAULT_CHECKLIST.map((item) => ({
     ...item,
@@ -99,13 +158,28 @@ export function useOnboarding() {
     });
   }, []);
 
-  const resetOnboarding = useCallback(() => {
-    const next: OnboardingState = { tourCompleted: false, dismissed: false, checklist: {} };
-    saveState(next);
-    setState(next);
+  const hideForever = useCallback(() => {
+    setState((prev) => {
+      const next = { ...prev, dismissed: true, hiddenForever: true };
+      saveState(next);
+      return next;
+    });
+    void persistHiddenToProfile(true);
   }, []);
 
-  const showChecklist = !state.dismissed || Object.values(state.checklist).some((v) => v);
+  const resetOnboarding = useCallback(() => {
+    const next: OnboardingState = {
+      tourCompleted: false,
+      dismissed: false,
+      hiddenForever: false,
+      checklist: {},
+    };
+    saveState(next);
+    setState(next);
+    void persistHiddenToProfile(false);
+  }, []);
+
+  const showChecklist = !state.hiddenForever && !state.dismissed;
 
   return {
     tourRunning,
@@ -115,6 +189,7 @@ export function useOnboarding() {
     finishTour,
     startTour,
     dismissChecklist,
+    hideForever,
     resetOnboarding,
   };
 }
