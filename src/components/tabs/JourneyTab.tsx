@@ -266,5 +266,3 @@ export function JourneyTab({ currentGlucose: _ }: JourneyTabProps) {
   );
 }
 
-// Re-export of unused Award import is removed; keep type-clean imports.
-void Award;
