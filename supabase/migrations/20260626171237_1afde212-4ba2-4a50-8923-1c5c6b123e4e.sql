@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS onboarding_hidden BOOLEAN NOT NULL DEFAULT false;

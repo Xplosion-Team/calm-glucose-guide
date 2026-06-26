@@ -10,7 +10,7 @@ const MOCK_ITEMS: ChecklistItem[] = [
   { id: "check_predictions", label: "Check your predictions", description: "Look at the predictions.", completed: false },
   { id: "try_whatif", label: "Try a What-If scenario", description: "Go to What If tab.", completed: true },
   { id: "explore_twin", label: "Explore your Digital Twin", description: "Visit Twin tab.", completed: false },
-  { id: "connect_dexcom", label: "Connect Dexcom (optional)", description: "Link your CGM.", completed: false },
+  { id: "connect_dexcom", label: "Connect to your T1Pal", description: "Link your T1Pal account.", completed: false },
 ];
 
 const ALL_DONE: ChecklistItem[] = MOCK_ITEMS.map((i) => ({ ...i, completed: true }));

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle2, Circle, ChevronDown, ChevronUp, Sparkles, RotateCcw } from "lucide-react";
+import { CheckCircle2, Circle, ChevronDown, ChevronUp, Sparkles, RotateCcw, X, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -15,9 +15,17 @@ interface OnboardingChecklistProps {
   items: ChecklistItem[];
   onStartTour: () => void;
   onResetChecklist: () => void;
+  onDismiss?: () => void;
+  onHideForever?: () => void;
 }
 
-export function OnboardingChecklist({ items, onStartTour, onResetChecklist }: OnboardingChecklistProps) {
+export function OnboardingChecklist({
+  items,
+  onStartTour,
+  onResetChecklist,
+  onDismiss,
+  onHideForever,
+}: OnboardingChecklistProps) {
   const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(!isMobile);
 
@@ -32,15 +40,16 @@ export function OnboardingChecklist({ items, onStartTour, onResetChecklist }: On
         "fixed z-40 rounded-2xl border bg-card shadow-lg overflow-hidden animate-fade-in",
         isMobile
           ? "bottom-16 left-2 right-2 w-auto max-h-[70vh] overflow-y-auto"
-          : "bottom-20 right-4 w-80"
+          : "bottom-20 right-4 w-80",
       )}
     >
       {/* Header */}
-      <button
-        onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between p-3 sm:p-4 hover:bg-secondary/50 transition-colors"
-      >
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between p-3 sm:p-4 hover:bg-secondary/30 transition-colors">
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="flex-1 flex items-center gap-2 text-left"
+          aria-expanded={expanded}
+        >
           <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
           <span className="font-semibold text-foreground text-xs sm:text-sm">
             Getting Started
@@ -48,18 +57,22 @@ export function OnboardingChecklist({ items, onStartTour, onResetChecklist }: On
           <span className="text-xs text-muted-foreground">
             {completed}/{total}
           </span>
-        </div>
-        <div className="flex items-center gap-1 text-muted-foreground">
-          <span className="text-[10px] sm:text-xs">
-            {expanded ? "Tap to hide" : "Tap to show"}
-          </span>
           {expanded ? (
-            <ChevronDown className="w-4 h-4" />
+            <ChevronDown className="w-4 h-4 text-muted-foreground ml-1" />
           ) : (
-            <ChevronUp className="w-4 h-4" />
+            <ChevronUp className="w-4 h-4 text-muted-foreground ml-1" />
           )}
-        </div>
-      </button>
+        </button>
+        {onDismiss && (
+          <button
+            onClick={onDismiss}
+            aria-label="Close Getting Started"
+            className="ml-2 p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors touch-target"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
 
       {/* Progress bar */}
       <div className="px-3 sm:px-4 pb-1">
@@ -79,7 +92,7 @@ export function OnboardingChecklist({ items, onStartTour, onResetChecklist }: On
               key={item.id}
               className={cn(
                 "flex items-start gap-2.5 p-2 sm:p-2.5 rounded-xl transition-colors",
-                item.completed ? "bg-secondary/40" : "bg-background"
+                item.completed ? "bg-secondary/40" : "bg-background",
               )}
             >
               {item.completed ? (
@@ -91,7 +104,7 @@ export function OnboardingChecklist({ items, onStartTour, onResetChecklist }: On
                 <p
                   className={cn(
                     "text-xs sm:text-sm font-medium",
-                    item.completed ? "text-muted-foreground line-through" : "text-foreground"
+                    item.completed ? "text-muted-foreground line-through" : "text-foreground",
                   )}
                 >
                   {item.label}
@@ -128,6 +141,16 @@ export function OnboardingChecklist({ items, onStartTour, onResetChecklist }: On
               </Button>
             )}
           </div>
+
+          {onHideForever && (
+            <button
+              onClick={onHideForever}
+              className="w-full flex items-center justify-center gap-1.5 pt-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <EyeOff className="w-3.5 h-3.5" />
+              Don&apos;t show this again
+            </button>
+          )}
 
           {allDone && (
             <p className="text-center text-xs text-primary font-medium pt-1">

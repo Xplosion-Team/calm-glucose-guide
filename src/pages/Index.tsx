@@ -123,6 +123,8 @@ const Index = () => {
     finishTour,
     startTour,
     resetOnboarding,
+    dismissChecklist,
+    hideForever,
   } = useOnboarding();
 
   useEffect(() => {
@@ -163,6 +165,8 @@ const Index = () => {
           items={checklist}
           onStartTour={startTour}
           onResetChecklist={resetOnboarding}
+          onDismiss={dismissChecklist}
+          onHideForever={hideForever}
         />
       )}
 
