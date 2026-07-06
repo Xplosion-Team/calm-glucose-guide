@@ -10,11 +10,12 @@ export function LanguageToggle() {
       variant="ghost"
       size="sm"
       onClick={() => setLang(lang === "en" ? "es" : "en")}
-      className="gap-1.5 text-muted-foreground hover:text-foreground rounded-full px-3"
+      className="gap-1.5 text-muted-foreground hover:text-foreground rounded-full px-2 sm:px-3"
       aria-label={t("lang.switch")}
     >
       <Globe className="w-5 h-5" aria-hidden="true" />
-      <span className="text-sm font-medium">{t("lang.switch")}</span>
+      <span className="hidden sm:inline text-sm font-medium">{t("lang.switch")}</span>
+
     </Button>
   );
 }
