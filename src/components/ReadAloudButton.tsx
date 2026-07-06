@@ -121,7 +121,7 @@ export function ReadAloudButton() {
         <DropdownMenuTrigger asChild>
           <button
             aria-label="Read-aloud settings"
-            className="text-[10px] font-medium text-muted-foreground -ml-1 px-1.5 py-0.5 rounded hover:bg-secondary uppercase tracking-wide"
+            className="hidden sm:inline-block text-[10px] font-medium text-muted-foreground -ml-1 px-1.5 py-0.5 rounded hover:bg-secondary uppercase tracking-wide"
           >
             {mode === "brief" ? "Brief" : mode === "detailed" ? "Detail" : "Std"}
           </button>
