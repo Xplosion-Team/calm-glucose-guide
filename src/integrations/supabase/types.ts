@@ -732,6 +732,51 @@ export type Database = {
         }
         Relationships: []
       }
+      reports: {
+        Row: {
+          created_at: string
+          csv_url: string | null
+          generated_at: string
+          generated_by: string
+          id: string
+          pdf_url: string | null
+          report_end_date: string
+          report_start_date: string
+          report_type: string
+          stats: Json | null
+          summary: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          csv_url?: string | null
+          generated_at?: string
+          generated_by?: string
+          id?: string
+          pdf_url?: string | null
+          report_end_date: string
+          report_start_date: string
+          report_type: string
+          stats?: Json | null
+          summary?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          csv_url?: string | null
+          generated_at?: string
+          generated_by?: string
+          id?: string
+          pdf_url?: string | null
+          report_end_date?: string
+          report_start_date?: string
+          report_type?: string
+          stats?: Json | null
+          summary?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       t1pal_connections: {
         Row: {
           access_token_encrypted: string | null

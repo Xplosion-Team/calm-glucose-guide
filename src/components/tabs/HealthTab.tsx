@@ -1,15 +1,22 @@
-import { useMemo } from "react";
-import { RefreshCw } from "lucide-react";
+import { useMemo, useState } from "react";
+import { RefreshCw, FileText, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { T1PalConnectSection } from "@/components/settings/t1pal/T1PalSettingsPage";
 import { MedicationsLinkCard } from "@/components/medications/MedicationsPage";
 import { MetricCard } from "@/components/health/MetricCard";
+import { HealthReportScreen } from "@/components/health/HealthReportScreen";
 import { useHealthKit } from "@/hooks/useHealthKit";
 import { DEFAULT_METRICS } from "@/services/health";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export function HealthTab() {
   const { snapshot, isLoading, refresh, provider } = useHealthKit();
+  const { lang } = useI18n();
+  const [showReport, setShowReport] = useState(false);
+
+  if (showReport) return <HealthReportScreen onBack={() => setShowReport(false)} />;
 
   const lastSyncLabel = useMemo(() => {
     if (!snapshot?.lastSyncAt) return "Not synced yet";
@@ -36,6 +43,33 @@ export function HealthTab() {
 
       {/* Medications */}
       <MedicationsLinkCard />
+
+      {/* Health Report */}
+      <button
+        onClick={() => setShowReport(true)}
+        className="w-full text-left touch-target"
+        aria-label={lang === "es" ? "Abrir Reporte de Salud" : "Open Health Report"}
+      >
+        <Card className="glass-card border-0 hover:bg-accent/40 transition-colors">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <FileText className="w-6 h-6" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-foreground">
+                📄 {lang === "es" ? "Reporte de Salud" : "Health Report"}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {lang === "es"
+                  ? "Genere un resumen de su glucosa, comidas y medicamentos para su equipo de atención o investigación."
+                  : "Generate a summary of your glucose, meals, and medications for your care or research team."}
+              </p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+          </CardContent>
+        </Card>
+      </button>
+
 
       {/* Today summary */}
       <section aria-labelledby="today-heading" className="space-y-3">
