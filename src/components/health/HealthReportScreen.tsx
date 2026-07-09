@@ -215,40 +215,53 @@ function HealthReportScreenInner({ onBack }: Props) {
     [readings],
   );
 
-  const genPdf = useCallback(() => {
-    return renderHealthReportPdf(report, logs, medEvents, medications, responses, {
-      participantId: profile.participantId,
-      userName: profile.name,
-      lang: isEs ? "es" : "en",
-    });
-  }, [report, logs, medEvents, medications, responses, profile, isEs]);
-
   const downloadPdf = () => {
-    const doc = genPdf();
-    doc.save(`calm-glucose-report-${report.startDate}-${report.endDate}.pdf`);
+    if (!report) { toast({ title: isEs ? "No hay reporte para descargar" : "No report to download", variant: "destructive" }); return; }
+    try {
+      const doc = renderHealthReportPdf(report, logs, medEvents, medications, responses, {
+        participantId: profile.participantId, userName: profile.name, lang: isEs ? "es" : "en",
+      });
+      doc.save(`calm-glucose-report-${report.startDate}-${report.endDate}.pdf`);
+    } catch (e) {
+      console.error("[HealthReport] pdf failed", e);
+      toast({ title: isEs ? "No se pudo generar el PDF" : "Could not generate PDF", variant: "destructive" });
+    }
   };
 
   const sharePdf = async () => {
-    const doc = genPdf();
-    const blob = doc.output("blob");
-    const file = new File([blob], `calm-glucose-report-${report.startDate}.pdf`, { type: "application/pdf" });
-    const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
-    if (nav.canShare?.({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: "Health Report" }); return; }
-      catch { /* user cancelled */ }
+    if (!report) return;
+    try {
+      const doc = renderHealthReportPdf(report, logs, medEvents, medications, responses, {
+        participantId: profile.participantId, userName: profile.name, lang: isEs ? "es" : "en",
+      });
+      const blob = doc.output("blob");
+      const file = new File([blob], `calm-glucose-report-${report.startDate}.pdf`, { type: "application/pdf" });
+      const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+      if (nav.canShare?.({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: "Health Report" }); return; }
+        catch { /* user cancelled */ }
+      }
+      downloadPdf();
+    } catch (e) {
+      console.error("[HealthReport] share failed", e);
     }
-    downloadPdf();
   };
 
   const downloadCsv = () => {
-    const csv = healthReportCsv(report, logs, medEvents, medications);
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `calm-glucose-report-${report.startDate}-${report.endDate}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    if (!report) return;
+    try {
+      const csv = healthReportCsv(report, logs, medEvents, medications);
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `calm-glucose-report-${report.startDate}-${report.endDate}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("[HealthReport] csv failed", e);
+      toast({ title: isEs ? "No se pudo generar el CSV" : "Could not generate CSV", variant: "destructive" });
+    }
   };
 
   const saveToHistory = async () => {
