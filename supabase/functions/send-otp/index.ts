@@ -6,6 +6,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function sha256Hex(input: string): Promise<string> {
+  const buf = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -42,17 +50,18 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    // Generate 6-digit code
+    // Generate 6-digit code (only ever held in memory + SMS body — never logged, never persisted plaintext)
     const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const codeHash = await sha256Hex(code);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
 
     // Delete old OTPs for this phone
     await supabase.from("phone_otps").delete().eq("phone", normalizedPhone);
 
-    // Store new OTP
+    // Store OTP as a SHA-256 hash so a DB breach or accidental log capture cannot reveal a valid code.
     const { error: dbError } = await supabase.from("phone_otps").insert({
       phone: normalizedPhone,
-      code,
+      code: codeHash,
       expires_at: expiresAt,
     });
 
