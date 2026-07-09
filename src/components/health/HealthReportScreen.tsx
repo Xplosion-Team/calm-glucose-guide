@@ -104,40 +104,94 @@ function HealthReportScreenInner({ onBack }: Props) {
     }
   }, [rangeKey]);
 
-  // Fetch report data
+  // Fetch report data with per-query error containment.
   const loadData = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
+    setUsingMock(false);
     const startISO = new Date(start.getFullYear(), start.getMonth(), start.getDate()).toISOString();
     const endISO = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59).toISOString();
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      const [{ data: prof }, { data: trial }] = await Promise.all([
-        supabase.from("profiles").select("display_name").maybeSingle(),
-        supabase.from("trial_enrollments").select("trial_id").maybeSingle(),
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      // Debug logging (temporary)
+      console.log("[HealthReport] auth", { hasSession: !!session, userId: session?.user?.id });
+      console.log("[HealthReport] range", { startISO, endISO });
+
+      if (session?.user) {
+        try {
+          const [{ data: prof }, { data: trial }] = await Promise.all([
+            supabase.from("profiles").select("display_name").maybeSingle(),
+            supabase.from("trial_enrollments").select("trial_id").maybeSingle(),
+          ]);
+          setProfile({
+            name: prof?.display_name ?? session.user.email ?? "",
+            participantId: trial?.trial_id ?? null,
+          });
+        } catch (e) {
+          console.warn("[HealthReport] profile fetch failed", e);
+        }
+      }
+
+      const safeQuery = async <T,>(name: string, run: () => Promise<{ data: unknown; error: unknown }>): Promise<T[]> => {
+        try {
+          const { data, error } = await run();
+          if (error) {
+            console.warn(`[HealthReport] ${name} query error`, error);
+            return [];
+          }
+          const arr = Array.isArray(data) ? (data as T[]) : [];
+          console.log(`[HealthReport] ${name} rows: ${arr.length}`);
+          return arr;
+        } catch (e) {
+          console.warn(`[HealthReport] ${name} exception`, e);
+          return [];
+        }
+      };
+
+      const [cgm, fl, me, meds, mr, rl] = await Promise.all([
+        safeQuery<CgmReading>("cgm_readings", () =>
+          supabase.from("cgm_readings").select("ts,mg_dl").gte("ts", startISO).lte("ts", endISO).order("ts")),
+        safeQuery<FoodLogRow>("food_logs", () =>
+          supabase.from("food_logs").select("*").gte("logged_at", startISO).lte("logged_at", endISO).order("logged_at")),
+        safeQuery<MedEventRow>("medication_events", () =>
+          supabase.from("medication_events").select("*").gte("taken_at", startISO).lte("taken_at", endISO).order("taken_at")),
+        safeQuery<MedicationRow>("medications", () =>
+          supabase.from("medications").select("*")),
+        safeQuery<MealResponseRow>("meal_responses", () =>
+          supabase.from("meal_responses").select("food_log_id,meal_score,peak_mg_dl,recovery_time_min").eq("status", "ready")),
+        safeQuery<SavedReport>("reports", () =>
+          supabase.from("reports").select("*").order("generated_at", { ascending: false }).limit(20)),
       ]);
-      setProfile({
-        name: prof?.display_name ?? session.user.email ?? "",
-        participantId: trial?.trial_id ?? null,
-      });
+
+      let useReadings = cgm;
+      let useLogs = fl;
+      let useMedEvents = me;
+      let useMedications = meds;
+
+      const noRealData = cgm.length === 0 && fl.length === 0 && me.length === 0;
+      if (noRealData && ENABLE_MOCK_FALLBACK) {
+        const mock = buildMockData();
+        useReadings = mock.readings;
+        useLogs = mock.logs;
+        useMedEvents = mock.medEvents;
+        useMedications = mock.medications;
+        setUsingMock(true);
+        console.info("[HealthReport] no real data — showing sample preview");
+      }
+
+      setReadings(useReadings);
+      setLogs(useLogs);
+      setMedEvents(useMedEvents);
+      setMedications(useMedications);
+      setResponses(mr);
+      setSaved(rl);
+    } catch (err) {
+      console.error("[HealthReport] loadData failed", err);
+      setLoadError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
     }
-
-    const [{ data: cgm }, { data: fl }, { data: me }, { data: meds }, { data: mr }, { data: rl }] = await Promise.all([
-      supabase.from("cgm_readings").select("ts,mg_dl").gte("ts", startISO).lte("ts", endISO).order("ts"),
-      supabase.from("food_logs").select("*").gte("logged_at", startISO).lte("logged_at", endISO).order("logged_at"),
-      supabase.from("medication_events").select("*").gte("taken_at", startISO).lte("taken_at", endISO).order("taken_at"),
-      supabase.from("medications").select("*"),
-      supabase.from("meal_responses").select("food_log_id,meal_score,peak_mg_dl,recovery_time_min").eq("status", "ready"),
-      supabase.from("reports").select("*").order("generated_at", { ascending: false }).limit(20),
-    ]);
-
-    setReadings((cgm as CgmReading[]) ?? []);
-    setLogs((fl as FoodLogRow[]) ?? []);
-    setMedEvents((me as MedEventRow[]) ?? []);
-    setMedications((meds as MedicationRow[]) ?? []);
-    setResponses((mr as MealResponseRow[]) ?? []);
-    setSaved((rl as SavedReport[]) ?? []);
-    setLoading(false);
   }, [start, end]);
 
   useEffect(() => { void loadData(); }, [loadData]);
@@ -145,9 +199,16 @@ function HealthReportScreenInner({ onBack }: Props) {
   const startISO = useMemo(() => new Date(start.getFullYear(), start.getMonth(), start.getDate()).toISOString(), [start]);
   const endISO = useMemo(() => new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59).toISOString(), [end]);
 
-  const report = useMemo(
-    () => assembleReport(readings, logs, medEvents, medications, startISO, endISO, isEs ? "es" : "en"),
-    [readings, logs, medEvents, medications, startISO, endISO, isEs],
+  const report = useMemo(() => {
+    try {
+      return assembleReport(readings, logs, medEvents, medications, startISO, endISO, isEs ? "es" : "en");
+    } catch (e) {
+      console.error("[HealthReport] assembleReport failed", e);
+      return null;
+    }
+  }, [readings, logs, medEvents, medications, startISO, endISO, isEs]);
+
+  useEffect(() => { if (report) console.log("[HealthReport] report", report); }, [report]);
   );
 
   const trendData = useMemo(
