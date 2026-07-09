@@ -181,18 +181,29 @@ const Index = () => {
           data-tour="dexcom"
         >
           <DexcomNightscoutConnect />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={async () => {
-              await supabase.auth.signOut();
-              navigate("/auth");
-            }}
-            className="gap-1 text-muted-foreground"
-          >
-            <LogOut className="w-4 h-4" aria-hidden="true" />
-            {t("auth.signOut")}
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/account")}
+              className="gap-1 text-muted-foreground"
+            >
+              <UserCog className="w-4 h-4" aria-hidden="true" />
+              {t("auth.account")}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                await supabase.auth.signOut();
+                navigate("/auth");
+              }}
+              className="gap-1 text-muted-foreground"
+            >
+              <LogOut className="w-4 h-4" aria-hidden="true" />
+              {t("auth.signOut")}
+            </Button>
+          </div>
         </div>
 
         <div className="mt-4">
