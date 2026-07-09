@@ -133,7 +133,7 @@ function HealthReportScreenInner({ onBack }: Props) {
         }
       }
 
-      const safeQuery = async <T,>(name: string, run: () => Promise<{ data: unknown; error: unknown }>): Promise<T[]> => {
+      const safeQuery = async <T,>(name: string, run: () => PromiseLike<{ data: unknown; error: unknown }>): Promise<T[]> => {
         try {
           const { data, error } = await run();
           if (error) {
