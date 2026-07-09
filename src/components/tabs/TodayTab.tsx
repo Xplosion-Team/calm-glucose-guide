@@ -243,6 +243,8 @@ export function TodayTab() {
           </Button>
         </div>
       )}
+
+      <FoodInsightsSheet open={showInsights} onOpenChange={setShowInsights} />
     </div>
   );
 }
