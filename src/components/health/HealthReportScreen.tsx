@@ -58,10 +58,20 @@ interface SavedReport {
   summary: string | null;
 }
 
-export function HealthReportScreen({ onBack }: Props) {
+export function HealthReportScreen(props: Props) {
+  return (
+    <HealthReportErrorBoundary onBack={props.onBack}>
+      <HealthReportScreenInner {...props} />
+    </HealthReportErrorBoundary>
+  );
+}
+
+function HealthReportScreenInner({ onBack }: Props) {
   const { lang } = useI18n();
   const isEs = lang === "es";
   const { toast } = useToast();
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [usingMock, setUsingMock] = useState(false);
 
   const [rangeKey, setRangeKey] = useState<RangeKey>("7d");
   const [start, setStart] = useState<Date>(() => new Date(Date.now() - 6 * 86400000));
