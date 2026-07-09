@@ -81,10 +81,11 @@ const TIR_LOW = 70;
 const TIR_HIGH = 180;
 
 export function computeCgmStats(readings: CgmReading[], startISO: string, endISO: string): CgmStats {
-  if (readings.length === 0) {
+  const safe = Array.isArray(readings) ? readings.filter((r) => r && r.mg_dl != null && !Number.isNaN(Number(r.mg_dl))) : [];
+  if (safe.length === 0) {
     return { count: 0, avg: null, gmi: null, tir: 0, tar: 0, tbr: 0, min: null, max: null, std: null, cv: null, sensorWearPct: null };
   }
-  const values = readings.map((r) => Number(r.mg_dl));
+  const values = safe.map((r) => Number(r.mg_dl));
   const avg = values.reduce((a, b) => a + b, 0) / values.length;
   const inRange = values.filter((v) => v >= TIR_LOW && v <= TIR_HIGH).length;
   const above = values.filter((v) => v > TIR_HIGH).length;
