@@ -246,6 +246,16 @@ const Auth = () => {
                 {!isLogin && (
                   <p className="text-sm text-muted-foreground">At least 6 characters.</p>
                 )}
+                {isLogin && (
+                  <div className="text-right">
+                    <Link
+                      to="/forgot-password"
+                      className="text-sm text-primary underline font-medium"
+                    >
+                      {t("auth.forgotPassword")}
+                    </Link>
+                  </div>
+                )}
               </div>
               <Button type="submit" className="w-full h-14 text-lg" disabled={loading}>
                 {loading && <Loader2 className="w-5 h-5 mr-2 animate-spin" aria-hidden="true" />}
