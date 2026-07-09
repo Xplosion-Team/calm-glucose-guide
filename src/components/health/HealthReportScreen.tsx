@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, FileText, Download, Share2, Save, Loader2, Trash2, Sparkles, CalendarDays } from "lucide-react";
+import { Component, useCallback, useEffect, useMemo, useState, type ReactNode, type ErrorInfo } from "react";
+import { ArrowLeft, FileText, Download, Share2, Save, Loader2, Trash2, Sparkles, CalendarDays, AlertTriangle, Inbox } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +17,32 @@ import {
   assembleReport, type CgmReading, type FoodLogRow, type MedEventRow, type MedicationRow, type MealResponseRow,
 } from "@/lib/healthReport";
 import { renderHealthReportPdf, healthReportCsv } from "@/lib/healthReportPdf";
+
+// Toggle to visually verify the screen with fabricated data when the account
+// has no CGM / food / medication entries yet. Set to false before production.
+const ENABLE_MOCK_FALLBACK = true;
+
+function buildMockData(): {
+  readings: CgmReading[]; logs: FoodLogRow[]; medEvents: MedEventRow[]; medications: MedicationRow[];
+} {
+  const now = Date.now();
+  const readings: CgmReading[] = Array.from({ length: 24 * 12 }, (_, i) => ({
+    ts: new Date(now - (24 * 12 - i) * 5 * 60_000).toISOString(),
+    mg_dl: 110 + Math.round(30 * Math.sin(i / 8) + (i % 7) * 3),
+  }));
+  const logs: FoodLogRow[] = [
+    { id: "m1", type: "food", label: "Sample oatmeal", carbs_grams: 30, portion_size: "1 bowl", source: "mock", logged_at: new Date(now - 6 * 3600_000).toISOString() },
+    { id: "m2", type: "drink", label: "Sample coffee", carbs_grams: 5, portion_size: "1 cup", source: "mock", logged_at: new Date(now - 3 * 3600_000).toISOString() },
+  ];
+  const medications: MedicationRow[] = [
+    { id: "med1", name: "Metformin", med_class: "biguanide", dose: 500, unit: "mg" },
+  ];
+  const medEvents: MedEventRow[] = [
+    { id: "e1", medication_id: "med1", taken_at: new Date(now - 8 * 3600_000).toISOString(), dose: 500, source: "mock" },
+  ];
+  return { readings, logs, medEvents, medications };
+}
+
 
 interface Props { onBack: () => void }
 
