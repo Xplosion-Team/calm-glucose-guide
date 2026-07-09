@@ -265,6 +265,7 @@ function HealthReportScreenInner({ onBack }: Props) {
   };
 
   const saveToHistory = async () => {
+    if (!report) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return;
     setSaving(true);
