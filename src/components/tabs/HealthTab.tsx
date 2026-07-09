@@ -1,15 +1,22 @@
-import { useMemo } from "react";
-import { RefreshCw } from "lucide-react";
+import { useMemo, useState } from "react";
+import { RefreshCw, FileText, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { T1PalConnectSection } from "@/components/settings/t1pal/T1PalSettingsPage";
 import { MedicationsLinkCard } from "@/components/medications/MedicationsPage";
 import { MetricCard } from "@/components/health/MetricCard";
+import { HealthReportScreen } from "@/components/health/HealthReportScreen";
 import { useHealthKit } from "@/hooks/useHealthKit";
 import { DEFAULT_METRICS } from "@/services/health";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export function HealthTab() {
   const { snapshot, isLoading, refresh, provider } = useHealthKit();
+  const { lang } = useI18n();
+  const [showReport, setShowReport] = useState(false);
+
+  if (showReport) return <HealthReportScreen onBack={() => setShowReport(false)} />;
 
   const lastSyncLabel = useMemo(() => {
     if (!snapshot?.lastSyncAt) return "Not synced yet";
