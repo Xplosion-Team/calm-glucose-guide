@@ -33,6 +33,11 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/account" element={<Account />} />
+            <Route path="/account/email" element={<ChangeEmail />} />
+            <Route path="/account/password" element={<ChangePassword />} />
             <Route path="/dexcom/callback" element={<DexcomCallback />} />
             {NIGHTSCOUT_ENABLED && (
               <Route path={NIGHTSCOUT_SETTINGS_PATH} element={<NightscoutSettingsPage />} />
