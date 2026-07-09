@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { useI18n } from "@/i18n/I18nProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useI18n();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -243,6 +245,16 @@ const Auth = () => {
                 </div>
                 {!isLogin && (
                   <p className="text-sm text-muted-foreground">At least 6 characters.</p>
+                )}
+                {isLogin && (
+                  <div className="text-right">
+                    <Link
+                      to="/forgot-password"
+                      className="text-sm text-primary underline font-medium"
+                    >
+                      {t("auth.forgotPassword")}
+                    </Link>
+                  </div>
                 )}
               </div>
               <Button type="submit" className="w-full h-14 text-lg" disabled={loading}>
