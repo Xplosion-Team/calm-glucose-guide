@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, FileText, Download, Share2, Save, Loader2, Trash2, Sparkles, CalendarDays } from "lucide-react";
+import { Component, useCallback, useEffect, useMemo, useState, type ReactNode, type ErrorInfo } from "react";
+import { ArrowLeft, FileText, Download, Share2, Save, Loader2, Trash2, Sparkles, CalendarDays, AlertTriangle, Inbox } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +18,32 @@ import {
 } from "@/lib/healthReport";
 import { renderHealthReportPdf, healthReportCsv } from "@/lib/healthReportPdf";
 
+// Toggle to visually verify the screen with fabricated data when the account
+// has no CGM / food / medication entries yet. Set to false before production.
+const ENABLE_MOCK_FALLBACK = true;
+
+function buildMockData(): {
+  readings: CgmReading[]; logs: FoodLogRow[]; medEvents: MedEventRow[]; medications: MedicationRow[];
+} {
+  const now = Date.now();
+  const readings: CgmReading[] = Array.from({ length: 24 * 12 }, (_, i) => ({
+    ts: new Date(now - (24 * 12 - i) * 5 * 60_000).toISOString(),
+    mg_dl: 110 + Math.round(30 * Math.sin(i / 8) + (i % 7) * 3),
+  }));
+  const logs: FoodLogRow[] = [
+    { id: "m1", type: "food", label: "Sample oatmeal", carbs_grams: 30, portion_size: "1 bowl", source: "mock", logged_at: new Date(now - 6 * 3600_000).toISOString() },
+    { id: "m2", type: "drink", label: "Sample coffee", carbs_grams: 5, portion_size: "1 cup", source: "mock", logged_at: new Date(now - 3 * 3600_000).toISOString() },
+  ];
+  const medications: MedicationRow[] = [
+    { id: "med1", name: "Metformin", med_class: "biguanide", dose: 500, unit: "mg" },
+  ];
+  const medEvents: MedEventRow[] = [
+    { id: "e1", medication_id: "med1", taken_at: new Date(now - 8 * 3600_000).toISOString(), dose: 500, source: "mock" },
+  ];
+  return { readings, logs, medEvents, medications };
+}
+
+
 interface Props { onBack: () => void }
 
 type RangeKey = "7d" | "14d" | "30d" | "enroll" | "custom";
@@ -32,10 +58,20 @@ interface SavedReport {
   summary: string | null;
 }
 
-export function HealthReportScreen({ onBack }: Props) {
+export function HealthReportScreen(props: Props) {
+  return (
+    <HealthReportErrorBoundary onBack={props.onBack}>
+      <HealthReportScreenInner {...props} />
+    </HealthReportErrorBoundary>
+  );
+}
+
+function HealthReportScreenInner({ onBack }: Props) {
   const { lang } = useI18n();
   const isEs = lang === "es";
   const { toast } = useToast();
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [usingMock, setUsingMock] = useState(false);
 
   const [rangeKey, setRangeKey] = useState<RangeKey>("7d");
   const [start, setStart] = useState<Date>(() => new Date(Date.now() - 6 * 86400000));
@@ -68,40 +104,94 @@ export function HealthReportScreen({ onBack }: Props) {
     }
   }, [rangeKey]);
 
-  // Fetch report data
+  // Fetch report data with per-query error containment.
   const loadData = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
+    setUsingMock(false);
     const startISO = new Date(start.getFullYear(), start.getMonth(), start.getDate()).toISOString();
     const endISO = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59).toISOString();
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      const [{ data: prof }, { data: trial }] = await Promise.all([
-        supabase.from("profiles").select("display_name").maybeSingle(),
-        supabase.from("trial_enrollments").select("trial_id").maybeSingle(),
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      // Debug logging (temporary)
+      console.log("[HealthReport] auth", { hasSession: !!session, userId: session?.user?.id });
+      console.log("[HealthReport] range", { startISO, endISO });
+
+      if (session?.user) {
+        try {
+          const [{ data: prof }, { data: trial }] = await Promise.all([
+            supabase.from("profiles").select("display_name").maybeSingle(),
+            supabase.from("trial_enrollments").select("trial_id").maybeSingle(),
+          ]);
+          setProfile({
+            name: prof?.display_name ?? session.user.email ?? "",
+            participantId: trial?.trial_id ?? null,
+          });
+        } catch (e) {
+          console.warn("[HealthReport] profile fetch failed", e);
+        }
+      }
+
+      const safeQuery = async <T,>(name: string, run: () => PromiseLike<{ data: unknown; error: unknown }>): Promise<T[]> => {
+        try {
+          const { data, error } = await run();
+          if (error) {
+            console.warn(`[HealthReport] ${name} query error`, error);
+            return [];
+          }
+          const arr = Array.isArray(data) ? (data as T[]) : [];
+          console.log(`[HealthReport] ${name} rows: ${arr.length}`);
+          return arr;
+        } catch (e) {
+          console.warn(`[HealthReport] ${name} exception`, e);
+          return [];
+        }
+      };
+
+      const [cgm, fl, me, meds, mr, rl] = await Promise.all([
+        safeQuery<CgmReading>("cgm_readings", () =>
+          supabase.from("cgm_readings").select("ts,mg_dl").gte("ts", startISO).lte("ts", endISO).order("ts")),
+        safeQuery<FoodLogRow>("food_logs", () =>
+          supabase.from("food_logs").select("*").gte("logged_at", startISO).lte("logged_at", endISO).order("logged_at")),
+        safeQuery<MedEventRow>("medication_events", () =>
+          supabase.from("medication_events").select("*").gte("taken_at", startISO).lte("taken_at", endISO).order("taken_at")),
+        safeQuery<MedicationRow>("medications", () =>
+          supabase.from("medications").select("*")),
+        safeQuery<MealResponseRow>("meal_responses", () =>
+          supabase.from("meal_responses").select("food_log_id,meal_score,peak_mg_dl,recovery_time_min").eq("status", "ready")),
+        safeQuery<SavedReport>("reports", () =>
+          supabase.from("reports").select("*").order("generated_at", { ascending: false }).limit(20)),
       ]);
-      setProfile({
-        name: prof?.display_name ?? session.user.email ?? "",
-        participantId: trial?.trial_id ?? null,
-      });
+
+      let useReadings = cgm;
+      let useLogs = fl;
+      let useMedEvents = me;
+      let useMedications = meds;
+
+      const noRealData = cgm.length === 0 && fl.length === 0 && me.length === 0;
+      if (noRealData && ENABLE_MOCK_FALLBACK) {
+        const mock = buildMockData();
+        useReadings = mock.readings;
+        useLogs = mock.logs;
+        useMedEvents = mock.medEvents;
+        useMedications = mock.medications;
+        setUsingMock(true);
+        console.info("[HealthReport] no real data — showing sample preview");
+      }
+
+      setReadings(useReadings);
+      setLogs(useLogs);
+      setMedEvents(useMedEvents);
+      setMedications(useMedications);
+      setResponses(mr);
+      setSaved(rl);
+    } catch (err) {
+      console.error("[HealthReport] loadData failed", err);
+      setLoadError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
     }
-
-    const [{ data: cgm }, { data: fl }, { data: me }, { data: meds }, { data: mr }, { data: rl }] = await Promise.all([
-      supabase.from("cgm_readings").select("ts,mg_dl").gte("ts", startISO).lte("ts", endISO).order("ts"),
-      supabase.from("food_logs").select("*").gte("logged_at", startISO).lte("logged_at", endISO).order("logged_at"),
-      supabase.from("medication_events").select("*").gte("taken_at", startISO).lte("taken_at", endISO).order("taken_at"),
-      supabase.from("medications").select("*"),
-      supabase.from("meal_responses").select("food_log_id,meal_score,peak_mg_dl,recovery_time_min").eq("status", "ready"),
-      supabase.from("reports").select("*").order("generated_at", { ascending: false }).limit(20),
-    ]);
-
-    setReadings((cgm as CgmReading[]) ?? []);
-    setLogs((fl as FoodLogRow[]) ?? []);
-    setMedEvents((me as MedEventRow[]) ?? []);
-    setMedications((meds as MedicationRow[]) ?? []);
-    setResponses((mr as MealResponseRow[]) ?? []);
-    setSaved((rl as SavedReport[]) ?? []);
-    setLoading(false);
   }, [start, end]);
 
   useEffect(() => { void loadData(); }, [loadData]);
@@ -109,53 +199,73 @@ export function HealthReportScreen({ onBack }: Props) {
   const startISO = useMemo(() => new Date(start.getFullYear(), start.getMonth(), start.getDate()).toISOString(), [start]);
   const endISO = useMemo(() => new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59).toISOString(), [end]);
 
-  const report = useMemo(
-    () => assembleReport(readings, logs, medEvents, medications, startISO, endISO, isEs ? "es" : "en"),
-    [readings, logs, medEvents, medications, startISO, endISO, isEs],
-  );
+  const report = useMemo(() => {
+    try {
+      return assembleReport(readings, logs, medEvents, medications, startISO, endISO, isEs ? "es" : "en");
+    } catch (e) {
+      console.error("[HealthReport] assembleReport failed", e);
+      return null;
+    }
+  }, [readings, logs, medEvents, medications, startISO, endISO, isEs]);
+
+  useEffect(() => { if (report) console.log("[HealthReport] report", report); }, [report]);
 
   const trendData = useMemo(
     () => readings.map((r) => ({ t: new Date(r.ts).getTime(), mg_dl: Number(r.mg_dl) })),
     [readings],
   );
 
-  const genPdf = useCallback(() => {
-    return renderHealthReportPdf(report, logs, medEvents, medications, responses, {
-      participantId: profile.participantId,
-      userName: profile.name,
-      lang: isEs ? "es" : "en",
-    });
-  }, [report, logs, medEvents, medications, responses, profile, isEs]);
-
   const downloadPdf = () => {
-    const doc = genPdf();
-    doc.save(`calm-glucose-report-${report.startDate}-${report.endDate}.pdf`);
+    if (!report) { toast({ title: isEs ? "No hay reporte para descargar" : "No report to download", variant: "destructive" }); return; }
+    try {
+      const doc = renderHealthReportPdf(report, logs, medEvents, medications, responses, {
+        participantId: profile.participantId, userName: profile.name, lang: isEs ? "es" : "en",
+      });
+      doc.save(`calm-glucose-report-${report.startDate}-${report.endDate}.pdf`);
+    } catch (e) {
+      console.error("[HealthReport] pdf failed", e);
+      toast({ title: isEs ? "No se pudo generar el PDF" : "Could not generate PDF", variant: "destructive" });
+    }
   };
 
   const sharePdf = async () => {
-    const doc = genPdf();
-    const blob = doc.output("blob");
-    const file = new File([blob], `calm-glucose-report-${report.startDate}.pdf`, { type: "application/pdf" });
-    const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
-    if (nav.canShare?.({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: "Health Report" }); return; }
-      catch { /* user cancelled */ }
+    if (!report) return;
+    try {
+      const doc = renderHealthReportPdf(report, logs, medEvents, medications, responses, {
+        participantId: profile.participantId, userName: profile.name, lang: isEs ? "es" : "en",
+      });
+      const blob = doc.output("blob");
+      const file = new File([blob], `calm-glucose-report-${report.startDate}.pdf`, { type: "application/pdf" });
+      const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+      if (nav.canShare?.({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: "Health Report" }); return; }
+        catch { /* user cancelled */ }
+      }
+      downloadPdf();
+    } catch (e) {
+      console.error("[HealthReport] share failed", e);
     }
-    downloadPdf();
   };
 
   const downloadCsv = () => {
-    const csv = healthReportCsv(report, logs, medEvents, medications);
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `calm-glucose-report-${report.startDate}-${report.endDate}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    if (!report) return;
+    try {
+      const csv = healthReportCsv(report, logs, medEvents, medications);
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `calm-glucose-report-${report.startDate}-${report.endDate}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("[HealthReport] csv failed", e);
+      toast({ title: isEs ? "No se pudo generar el CSV" : "Could not generate CSV", variant: "destructive" });
+    }
   };
 
   const saveToHistory = async () => {
+    if (!report) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return;
     setSaving(true);
@@ -249,9 +359,50 @@ export function HealthReportScreen({ onBack }: Props) {
       </div>
 
       {loading ? (
-        <div className="py-8 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+        <div className="py-12 flex flex-col items-center justify-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" aria-hidden="true" />
+          <p className="text-sm text-muted-foreground">{isEs ? "Generando reporte…" : "Generating report..."}</p>
+        </div>
+      ) : loadError || !report ? (
+        <Card className="border-destructive/40">
+          <CardContent className="p-5 space-y-3 text-center">
+            <AlertTriangle className="w-8 h-8 mx-auto text-destructive" aria-hidden="true" />
+            <h3 className="text-lg font-semibold">{isEs ? "No se pudo generar el reporte" : "Unable to Generate Report"}</h3>
+            <p className="text-sm text-muted-foreground">
+              {isEs ? "Tuvimos un problema al generar tu reporte." : "We encountered an issue while generating your report."}
+            </p>
+            <div className="flex justify-center gap-2 pt-2">
+              <Button onClick={() => void loadData()} className="rounded-xl">{isEs ? "Reintentar" : "Retry"}</Button>
+              <Button variant="outline" onClick={onBack} className="rounded-xl">{isEs ? "Volver" : "Go Back"}</Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : readings.length === 0 && logs.length === 0 && medEvents.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="p-5 space-y-3 text-center">
+            <Inbox className="w-8 h-8 mx-auto text-muted-foreground" aria-hidden="true" />
+            <h3 className="text-lg font-semibold">{isEs ? "No hay datos de salud" : "No Health Data Found"}</h3>
+            <p className="text-sm text-muted-foreground">
+              {isEs
+                ? "No encontramos datos de glucosa, comidas o medicamentos en este rango. Prueba con un rango distinto."
+                : "We couldn't find glucose, food, or medication data for the selected date range. Try selecting a different date range."}
+            </p>
+            <Button onClick={() => setRangeKey("30d")} className="rounded-xl">
+              {isEs ? "Cambiar rango" : "Change Date Range"}
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <>
+          {usingMock && (
+            <Card className="border-primary/40 bg-primary/5">
+              <CardContent className="p-3 text-xs text-primary">
+                {isEs
+                  ? "Vista previa con datos de ejemplo — aún no hay datos reales."
+                  : "Preview with sample data — you don't have real data yet."}
+              </CardContent>
+            </Card>
+          )}
           {/* Participant */}
           <ReportSection title={isEs ? "Participante" : "Participant"}>
             <KV label={isEs ? "Nombre" : "Name"} value={profile.name || "—"} />
@@ -262,38 +413,44 @@ export function HealthReportScreen({ onBack }: Props) {
 
           {/* CGM summary */}
           <ReportSection title={isEs ? "Resumen MCG" : "CGM Summary"}>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <KV label={isEs ? "Promedio" : "Average"} value={metric(report.cgm.avg, "mg/dL")} />
-              <KV label="GMI" value={metric(report.cgm.gmi, "%")} />
-              <KV label={isEs ? "T. en Rango" : "Time In Range"} value={`${report.cgm.tir}%`} />
-              <KV label={isEs ? "T. sobre Rango" : "Time Above"} value={`${report.cgm.tar}%`} />
-              <KV label={isEs ? "T. bajo Rango" : "Time Below"} value={`${report.cgm.tbr}%`} />
-              <KV label={isEs ? "Máx" : "High"} value={metric(report.cgm.max, "mg/dL")} />
-              <KV label={isEs ? "Mín" : "Low"} value={metric(report.cgm.min, "mg/dL")} />
-              <KV label={isEs ? "Desv. Est." : "Std Dev"} value={metric(report.cgm.std, "mg/dL")} />
-              <KV label="CV" value={metric(report.cgm.cv, "%")} />
-              <KV label={isEs ? "Lecturas" : "Readings"} value={String(report.cgm.count)} />
-              <KV label={isEs ? "Uso sensor" : "Sensor wear"} value={metric(report.cgm.sensorWearPct, "%")} />
-            </div>
-            {trendData.length > 1 && (
-              <div className="h-48 mt-3">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trendData} margin={{ top: 5, right: 8, left: -20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="t" type="number" domain={["auto", "auto"]} tick={{ fontSize: 10 }} tickFormatter={(t) => new Date(t).toLocaleDateString(isEs ? "es-ES" : "en-US", { month: "numeric", day: "numeric" })} />
-                    <YAxis tick={{ fontSize: 10 }} />
-                    <Tooltip labelFormatter={(t) => new Date(t as number).toLocaleString(isEs ? "es-ES" : "en-US")} formatter={(v: number) => [`${v} mg/dL`, "Glucose"]} />
-                    <ReferenceLine y={180} stroke="hsl(var(--destructive))" strokeDasharray="3 3" />
-                    <ReferenceLine y={70} stroke="hsl(var(--destructive))" strokeDasharray="3 3" />
-                    <Line type="monotone" dataKey="mg_dl" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+            {report.cgm.count === 0 ? (
+              <p className="text-sm text-muted-foreground">{isEs ? "Sin datos de glucosa en este rango." : "No glucose data in this range."}</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <KV label={isEs ? "Promedio" : "Average"} value={metric(report.cgm.avg, "mg/dL")} />
+                  <KV label="GMI" value={metric(report.cgm.gmi, "%")} />
+                  <KV label={isEs ? "T. en Rango" : "Time In Range"} value={`${report.cgm.tir}%`} />
+                  <KV label={isEs ? "T. sobre Rango" : "Time Above"} value={`${report.cgm.tar}%`} />
+                  <KV label={isEs ? "T. bajo Rango" : "Time Below"} value={`${report.cgm.tbr}%`} />
+                  <KV label={isEs ? "Máx" : "High"} value={metric(report.cgm.max, "mg/dL")} />
+                  <KV label={isEs ? "Mín" : "Low"} value={metric(report.cgm.min, "mg/dL")} />
+                  <KV label={isEs ? "Desv. Est." : "Std Dev"} value={metric(report.cgm.std, "mg/dL")} />
+                  <KV label="CV" value={metric(report.cgm.cv, "%")} />
+                  <KV label={isEs ? "Lecturas" : "Readings"} value={String(report.cgm.count)} />
+                  <KV label={isEs ? "Uso sensor" : "Sensor wear"} value={metric(report.cgm.sensorWearPct, "%")} />
+                </div>
+                {trendData.length > 1 && (
+                  <div className="h-48 mt-3">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={trendData} margin={{ top: 5, right: 8, left: -20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="t" type="number" domain={["auto", "auto"]} tick={{ fontSize: 10 }} tickFormatter={(t) => new Date(t).toLocaleDateString(isEs ? "es-ES" : "en-US", { month: "numeric", day: "numeric" })} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip labelFormatter={(t) => new Date(t as number).toLocaleString(isEs ? "es-ES" : "en-US")} formatter={(v: number) => [`${v} mg/dL`, "Glucose"]} />
+                        <ReferenceLine y={180} stroke="hsl(var(--destructive))" strokeDasharray="3 3" />
+                        <ReferenceLine y={70} stroke="hsl(var(--destructive))" strokeDasharray="3 3" />
+                        <Line type="monotone" dataKey="mg_dl" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </>
             )}
           </ReportSection>
 
           {/* Daily stats */}
-          {report.daily.length > 0 && (
+          {(report.daily?.length ?? 0) > 0 && (
             <ReportSection title={isEs ? "Estadísticas diarias" : "Daily Statistics"}>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
@@ -303,9 +460,9 @@ export function HealthReportScreen({ onBack }: Props) {
                   <tbody>
                     {report.daily.map((d) => (
                       <tr key={d.date} className="border-t border-border">
-                        <td className="py-1.5">{d.date}</td><td className="text-center">{d.avg}</td>
-                        <td className="text-center">{d.tir}%</td><td className="text-center">{d.max}</td>
-                        <td className="text-center">{d.min}</td><td className="text-center">{d.count}</td>
+                        <td className="py-1.5">{d.date}</td><td className="text-center">{d.avg ?? "—"}</td>
+                        <td className="text-center">{d.tir}%</td><td className="text-center">{d.max ?? "—"}</td>
+                        <td className="text-center">{d.min ?? "—"}</td><td className="text-center">{d.count}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -317,10 +474,10 @@ export function HealthReportScreen({ onBack }: Props) {
           {/* Food */}
           <ReportSection title={isEs ? "Comidas" : "Food Log"}>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <KV label={isEs ? "Total" : "Total"} value={String(report.foodSummary.total)} />
-              <KV label={isEs ? "Carbos prom." : "Avg carbs"} value={metric(report.foodSummary.avgCarbs, "g")} />
+              <KV label={isEs ? "Total" : "Total"} value={String(report.foodSummary?.total ?? 0)} />
+              <KV label={isEs ? "Carbos prom." : "Avg carbs"} value={metric(report.foodSummary?.avgCarbs, "g")} />
             </div>
-            {report.foodSummary.top.length > 0 && (
+            {(report.foodSummary?.top?.length ?? 0) > 0 && (
               <div className="mt-2 space-y-1">
                 <p className="text-xs font-medium text-muted-foreground">{isEs ? "Más frecuentes" : "Most frequent"}</p>
                 {report.foodSummary.top.map((t) => (
@@ -335,9 +492,9 @@ export function HealthReportScreen({ onBack }: Props) {
           {/* Medications */}
           <ReportSection title={isEs ? "Medicamentos" : "Medications"}>
             <div className="grid grid-cols-3 gap-2 text-sm">
-              <KV label={isEs ? "Total" : "Total"} value={String(report.medSummary.total)} />
-              <KV label={isEs ? "Insulina" : "Insulin"} value={String(report.medSummary.insulinCount)} />
-              <KV label={isEs ? "Otros" : "Other"} value={String(report.medSummary.otherCount)} />
+              <KV label={isEs ? "Total" : "Total"} value={String(report.medSummary?.total ?? 0)} />
+              <KV label={isEs ? "Insulina" : "Insulin"} value={String(report.medSummary?.insulinCount ?? 0)} />
+              <KV label={isEs ? "Otros" : "Other"} value={String(report.medSummary?.otherCount ?? 0)} />
             </div>
           </ReportSection>
 
@@ -429,4 +586,41 @@ function KV({ label, value }: { label: string; value: string }) {
 function metric(n: number | null | undefined, unit = ""): string {
   if (n == null) return "—";
   return unit ? `${n} ${unit}` : String(n);
+}
+
+// Catches any unexpected render failure so the screen never appears blank.
+class HealthReportErrorBoundary extends Component<
+  { children: ReactNode; onBack: () => void },
+  { error: Error | null }
+> {
+  state: { error: Error | null } = { error: null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[HealthReport] render crashed", error, info);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="space-y-4 pb-6">
+          <Button variant="ghost" size="sm" onClick={this.props.onBack} className="gap-1">
+            <ArrowLeft className="w-4 h-4" /> Back
+          </Button>
+          <Card className="border-destructive/40">
+            <CardContent className="p-5 space-y-3 text-center">
+              <AlertTriangle className="w-8 h-8 mx-auto text-destructive" aria-hidden="true" />
+              <h3 className="text-lg font-semibold">Unable to Generate Report</h3>
+              <p className="text-sm text-muted-foreground">
+                We encountered an issue while generating your report.
+              </p>
+              <div className="flex justify-center gap-2 pt-2">
+                <Button onClick={() => this.setState({ error: null })} className="rounded-xl">Retry</Button>
+                <Button variant="outline" onClick={this.props.onBack} className="rounded-xl">Go Back</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }

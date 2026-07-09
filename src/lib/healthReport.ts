@@ -81,10 +81,11 @@ const TIR_LOW = 70;
 const TIR_HIGH = 180;
 
 export function computeCgmStats(readings: CgmReading[], startISO: string, endISO: string): CgmStats {
-  if (readings.length === 0) {
+  const safe = Array.isArray(readings) ? readings.filter((r) => r && r.mg_dl != null && !Number.isNaN(Number(r.mg_dl))) : [];
+  if (safe.length === 0) {
     return { count: 0, avg: null, gmi: null, tir: 0, tar: 0, tbr: 0, min: null, max: null, std: null, cv: null, sensorWearPct: null };
   }
-  const values = readings.map((r) => Number(r.mg_dl));
+  const values = safe.map((r) => Number(r.mg_dl));
   const avg = values.reduce((a, b) => a + b, 0) / values.length;
   const inRange = values.filter((v) => v >= TIR_LOW && v <= TIR_HIGH).length;
   const above = values.filter((v) => v > TIR_HIGH).length;
@@ -101,10 +102,10 @@ export function computeCgmStats(readings: CgmReading[], startISO: string, endISO
   const durationMs = new Date(endISO).getTime() - new Date(startISO).getTime();
   const days = Math.max(1, durationMs / 86400000);
   const expected = days * 288;
-  const sensorWearPct = expected > 0 ? Math.min(100, (readings.length / expected) * 100) : null;
+  const sensorWearPct = expected > 0 ? Math.min(100, (safe.length / expected) * 100) : null;
 
   return {
-    count: readings.length,
+    count: safe.length,
     avg: Math.round(avg * 10) / 10,
     gmi: Math.round(gmi * 100) / 100,
     tir: Math.round((inRange / values.length) * 1000) / 10,
@@ -142,21 +143,24 @@ export function computeDailyStats(readings: CgmReading[]): DailyStat[] {
 }
 
 export function computeFoodSummary(logs: FoodLogRow[]): FoodSummary {
-  const meals = logs.filter((l) => l.type === "food" || l.type === "drink");
+  const safe = Array.isArray(logs) ? logs : [];
+  const meals = safe.filter((l) => l && (l.type === "food" || l.type === "drink"));
   const withCarbs = meals.filter((l) => l.carbs_grams != null);
   const avgCarbs = withCarbs.length
     ? Math.round(withCarbs.reduce((s, l) => s + (l.carbs_grams ?? 0), 0) / withCarbs.length)
     : null;
   const counts = new Map<string, number>();
   for (const m of meals) {
-    const key = m.label.trim().toLowerCase();
+    const raw = (m.label ?? "").toString().trim();
+    if (!raw) continue;
+    const key = raw.toLowerCase();
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   const top = Array.from(counts.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([label, count]) => {
-      const original = meals.find((m) => m.label.trim().toLowerCase() === label)?.label ?? label;
+      const original = meals.find((m) => (m.label ?? "").toString().trim().toLowerCase() === label)?.label ?? label;
       return { label: original, count };
     });
   return { total: meals.length, avgCarbs, top };
