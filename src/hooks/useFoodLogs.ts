@@ -13,6 +13,9 @@ export interface FoodLog {
   portion_size: PortionSize | null;
   source: Source;
   logged_at: string;
+  is_favorite?: boolean;
+  image_url?: string | null;
+  notes?: string | null;
 }
 
 export interface NewLog {
@@ -21,6 +24,20 @@ export interface NewLog {
   carbsGrams?: number;
   portionSize?: PortionSize;
   source?: Source;
+  imageUrl?: string;
+  loggedAt?: string;
+}
+
+async function triggerMealAnalysis(foodLogId: string) {
+  try {
+    // Fire-and-forget; analysis happens in background so logging feels instant.
+    await supabase.functions.invoke("analyze-meal-response", {
+      body: { food_log_id: foodLogId },
+    });
+  } catch (e) {
+    // Non-fatal — logging must not fail if analysis errors.
+    console.warn("meal analysis failed", e);
+  }
 }
 
 export function useFoodLogs() {
@@ -51,7 +68,7 @@ export function useFoodLogs() {
     async (entry: NewLog) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return null;
-      const payload = {
+      const payload: Record<string, unknown> = {
         user_id: session.user.id,
         type: entry.type,
         label: entry.label,
@@ -59,17 +76,24 @@ export function useFoodLogs() {
         portion_size: entry.portionSize ?? null,
         source: entry.source ?? "manual",
       };
+      if (entry.imageUrl) payload.image_url = entry.imageUrl;
+      if (entry.loggedAt) payload.logged_at = entry.loggedAt;
       const { data, error } = await supabase
         .from("food_logs")
-        .insert(payload)
+        .insert(payload as never)
         .select()
         .single();
       if (error) {
         console.error("Insert log failed", error);
         return null;
       }
-      setLogs((prev) => [data as FoodLog, ...prev]);
-      return data as FoodLog;
+      const saved = data as FoodLog;
+      setLogs((prev) => [saved, ...prev]);
+      if (saved.type === "food" || saved.type === "drink") {
+        // Background analysis — don't await
+        void triggerMealAnalysis(saved.id);
+      }
+      return saved;
     },
     [],
   );
@@ -79,5 +103,19 @@ export function useFoodLogs() {
     if (!error) setLogs((prev) => prev.filter((l) => l.id !== id));
   }, []);
 
-  return { logs, loading, addLog, deleteLog, refresh };
+  const toggleFavorite = useCallback(async (id: string) => {
+    setLogs((prev) => prev.map((l) => l.id === id ? { ...l, is_favorite: !l.is_favorite } : l));
+    const current = logs.find((l) => l.id === id);
+    const next = !(current?.is_favorite ?? false);
+    const { error } = await supabase
+      .from("food_logs")
+      .update({ is_favorite: next } as never)
+      .eq("id", id);
+    if (error) {
+      // revert on failure
+      setLogs((prev) => prev.map((l) => l.id === id ? { ...l, is_favorite: !next } : l));
+    }
+  }, [logs]);
+
+  return { logs, loading, addLog, deleteLog, refresh, toggleFavorite };
 }
