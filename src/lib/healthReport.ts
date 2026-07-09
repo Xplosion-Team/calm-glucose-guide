@@ -142,21 +142,24 @@ export function computeDailyStats(readings: CgmReading[]): DailyStat[] {
 }
 
 export function computeFoodSummary(logs: FoodLogRow[]): FoodSummary {
-  const meals = logs.filter((l) => l.type === "food" || l.type === "drink");
+  const safe = Array.isArray(logs) ? logs : [];
+  const meals = safe.filter((l) => l && (l.type === "food" || l.type === "drink"));
   const withCarbs = meals.filter((l) => l.carbs_grams != null);
   const avgCarbs = withCarbs.length
     ? Math.round(withCarbs.reduce((s, l) => s + (l.carbs_grams ?? 0), 0) / withCarbs.length)
     : null;
   const counts = new Map<string, number>();
   for (const m of meals) {
-    const key = m.label.trim().toLowerCase();
+    const raw = (m.label ?? "").toString().trim();
+    if (!raw) continue;
+    const key = raw.toLowerCase();
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   const top = Array.from(counts.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([label, count]) => {
-      const original = meals.find((m) => m.label.trim().toLowerCase() === label)?.label ?? label;
+      const original = meals.find((m) => (m.label ?? "").toString().trim().toLowerCase() === label)?.label ?? label;
       return { label: original, count };
     });
   return { total: meals.length, avgCarbs, top };
