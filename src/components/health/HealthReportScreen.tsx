@@ -587,3 +587,40 @@ function metric(n: number | null | undefined, unit = ""): string {
   if (n == null) return "—";
   return unit ? `${n} ${unit}` : String(n);
 }
+
+// Catches any unexpected render failure so the screen never appears blank.
+class HealthReportErrorBoundary extends Component<
+  { children: ReactNode; onBack: () => void },
+  { error: Error | null }
+> {
+  state: { error: Error | null } = { error: null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[HealthReport] render crashed", error, info);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="space-y-4 pb-6">
+          <Button variant="ghost" size="sm" onClick={this.props.onBack} className="gap-1">
+            <ArrowLeft className="w-4 h-4" /> Back
+          </Button>
+          <Card className="border-destructive/40">
+            <CardContent className="p-5 space-y-3 text-center">
+              <AlertTriangle className="w-8 h-8 mx-auto text-destructive" aria-hidden="true" />
+              <h3 className="text-lg font-semibold">Unable to Generate Report</h3>
+              <p className="text-sm text-muted-foreground">
+                We encountered an issue while generating your report.
+              </p>
+              <div className="flex justify-center gap-2 pt-2">
+                <Button onClick={() => this.setState({ error: null })} className="rounded-xl">Retry</Button>
+                <Button variant="outline" onClick={this.props.onBack} className="rounded-xl">Go Back</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
