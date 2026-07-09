@@ -16,8 +16,6 @@ export function HealthTab() {
   const { lang } = useI18n();
   const [showReport, setShowReport] = useState(false);
 
-  if (showReport) return <HealthReportScreen onBack={() => setShowReport(false)} />;
-
   const lastSyncLabel = useMemo(() => {
     if (!snapshot?.lastSyncAt) return "Not synced yet";
     return `Last updated ${snapshot.lastSyncAt.toLocaleTimeString([], {
@@ -25,6 +23,9 @@ export function HealthTab() {
       minute: "2-digit",
     })}`;
   }, [snapshot?.lastSyncAt]);
+
+  if (showReport) return <HealthReportScreen onBack={() => setShowReport(false)} />;
+
 
   const isDemo = provider?.name === "Demo";
 
