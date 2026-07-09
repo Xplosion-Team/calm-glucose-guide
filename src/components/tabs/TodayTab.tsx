@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Apple, Coffee, Pill, Plus, Check, Clock, BookOpen, ArrowLeft, Camera, Type as TypeIcon, Mic, MessageSquare, Pencil } from "lucide-react";
+import { Apple, Coffee, Pill, Plus, Check, Clock, BookOpen, ArrowLeft, Camera, Type as TypeIcon, Mic, MessageSquare, Pencil, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,10 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 import { useFoodLogs, type EntryType, type Source } from "@/hooks/useFoodLogs";
 import { SmartLogCard } from "@/components/today/SmartLogCard";
+import { RecentMeals } from "@/components/today/RecentMeals";
+import { FavoriteMeals } from "@/components/today/FavoriteMeals";
 import { JournalView } from "@/components/journal/JournalView";
+import { FoodInsightsSheet } from "@/components/insights/FoodInsightsSheet";
 import type { TranslationKey } from "@/i18n/translations";
 
 const QUICK_OPTIONS: { type: EntryType; labelKey: TranslationKey; icon: typeof Apple }[] = [
