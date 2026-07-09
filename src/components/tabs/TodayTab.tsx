@@ -64,6 +64,7 @@ export function TodayTab() {
   const [activeType, setActiveType] = useState<EntryType | null>(null);
   const [customText, setCustomText] = useState("");
   const [showJournal, setShowJournal] = useState(false);
+  const [showInsights, setShowInsights] = useState(false);
 
   const todayKey = new Date().toISOString().slice(0, 10);
   const todayLogs = useMemo(
