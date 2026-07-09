@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LogOut,
+  UserCog,
   Activity,
   HelpCircle,
   TrendingUp,
