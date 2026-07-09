@@ -207,8 +207,11 @@ export type Database = {
           carbs_grams: number | null
           created_at: string
           id: string
+          image_url: string | null
+          is_favorite: boolean
           label: string
           logged_at: string
+          notes: string | null
           portion_size: string | null
           source: string
           type: string
@@ -218,8 +221,11 @@ export type Database = {
           carbs_grams?: number | null
           created_at?: string
           id?: string
+          image_url?: string | null
+          is_favorite?: boolean
           label: string
           logged_at?: string
+          notes?: string | null
           portion_size?: string | null
           source?: string
           type: string
@@ -229,8 +235,11 @@ export type Database = {
           carbs_grams?: number | null
           created_at?: string
           id?: string
+          image_url?: string | null
+          is_favorite?: boolean
           label?: string
           logged_at?: string
+          notes?: string | null
           portion_size?: string | null
           source?: string
           type?: string
@@ -354,6 +363,74 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      meal_responses: {
+        Row: {
+          auc: number | null
+          avg_mg_dl: number | null
+          baseline_mg_dl: number | null
+          computed_at: string
+          created_at: string
+          food_log_id: string
+          glucose_rise: number | null
+          id: string
+          meal_score: number | null
+          peak_mg_dl: number | null
+          readings_count: number | null
+          recovery_time_min: number | null
+          status: string
+          time_above_range_min: number | null
+          time_to_peak_min: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auc?: number | null
+          avg_mg_dl?: number | null
+          baseline_mg_dl?: number | null
+          computed_at?: string
+          created_at?: string
+          food_log_id: string
+          glucose_rise?: number | null
+          id?: string
+          meal_score?: number | null
+          peak_mg_dl?: number | null
+          readings_count?: number | null
+          recovery_time_min?: number | null
+          status?: string
+          time_above_range_min?: number | null
+          time_to_peak_min?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auc?: number | null
+          avg_mg_dl?: number | null
+          baseline_mg_dl?: number | null
+          computed_at?: string
+          created_at?: string
+          food_log_id?: string
+          glucose_rise?: number | null
+          id?: string
+          meal_score?: number | null
+          peak_mg_dl?: number | null
+          readings_count?: number | null
+          recovery_time_min?: number | null
+          status?: string
+          time_above_range_min?: number | null
+          time_to_peak_min?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_responses_food_log_id_fkey"
+            columns: ["food_log_id"]
+            isOneToOne: true
+            referencedRelation: "food_logs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       medication_events: {
         Row: {

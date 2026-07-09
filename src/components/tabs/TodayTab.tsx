@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Apple, Coffee, Pill, Plus, Check, Clock, BookOpen, ArrowLeft, Camera, Type as TypeIcon, Mic, MessageSquare, Pencil } from "lucide-react";
+import { Apple, Coffee, Pill, Plus, Check, Clock, BookOpen, ArrowLeft, Camera, Type as TypeIcon, Mic, MessageSquare, Pencil, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,10 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 import { useFoodLogs, type EntryType, type Source } from "@/hooks/useFoodLogs";
 import { SmartLogCard } from "@/components/today/SmartLogCard";
+import { RecentMeals } from "@/components/today/RecentMeals";
+import { FavoriteMeals } from "@/components/today/FavoriteMeals";
 import { JournalView } from "@/components/journal/JournalView";
+import { FoodInsightsSheet } from "@/components/insights/FoodInsightsSheet";
 import type { TranslationKey } from "@/i18n/translations";
 
 const QUICK_OPTIONS: { type: EntryType; labelKey: TranslationKey; icon: typeof Apple }[] = [
@@ -61,6 +64,7 @@ export function TodayTab() {
   const [activeType, setActiveType] = useState<EntryType | null>(null);
   const [customText, setCustomText] = useState("");
   const [showJournal, setShowJournal] = useState(false);
+  const [showInsights, setShowInsights] = useState(false);
 
   const todayKey = new Date().toISOString().slice(0, 10);
   const todayLogs = useMemo(
@@ -120,6 +124,16 @@ export function TodayTab() {
           });
         }}
       />
+
+      <RecentMeals />
+      <FavoriteMeals />
+
+      <div className="flex justify-end">
+        <Button variant="ghost" size="sm" onClick={() => setShowInsights(true)} className="gap-1 text-primary">
+          <Sparkles className="w-4 h-4" /> {lang === "es" ? "Perspectivas de comida" : "Food Insights"}
+        </Button>
+      </div>
+
 
       {/* Quick option buttons */}
       <div className="grid grid-cols-3 gap-2">
@@ -229,6 +243,8 @@ export function TodayTab() {
           </Button>
         </div>
       )}
+
+      <FoodInsightsSheet open={showInsights} onOpenChange={setShowInsights} />
     </div>
   );
 }

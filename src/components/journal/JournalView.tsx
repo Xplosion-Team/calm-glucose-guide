@@ -1,11 +1,16 @@
-import { useMemo, useState } from "react";
-import { Apple, Coffee, Pill, Camera, Type as TypeIcon, Mic, MessageSquare, Pencil, Trash2, Search, Calendar as CalendarIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Apple, Coffee, Pill, Camera, Type as TypeIcon, Mic, MessageSquare, Pencil, Trash2, Search, Calendar as CalendarIcon, Star, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useFoodLogs, type FoodLog, type Source, type EntryType } from "@/hooks/useFoodLogs";
 import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { MealDetailSheet } from "@/components/journal/MealDetailSheet";
+import { FoodInsightsSheet } from "@/components/insights/FoodInsightsSheet";
+import { scoreBand } from "@/hooks/useMealFeatures";
 
 const entryIcon = (type: EntryType) =>
   type === "food" ? Apple : type === "drink" ? Coffee : Pill;
@@ -43,9 +48,34 @@ function fmtDay(d: string, lang: string) {
 
 export function JournalView() {
   const { t, lang } = useI18n();
-  const { logs, loading, deleteLog } = useFoodLogs();
+  const { logs, loading, deleteLog, toggleFavorite } = useFoodLogs();
   const [query, setQuery] = useState("");
   const [activeDay, setActiveDay] = useState<string | null>(null);
+  const [selected, setSelected] = useState<FoodLog | null>(null);
+  const [showInsights, setShowInsights] = useState(false);
+  const [scores, setScores] = useState<Record<string, number>>({});
+
+  // Load meal scores in bulk so we can badge journal entries.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const { data } = await supabase
+        .from("meal_responses")
+        .select("food_log_id, meal_score")
+        .eq("status", "ready")
+        .limit(500);
+      if (!cancelled && data) {
+        const map: Record<string, number> = {};
+        for (const r of data as { food_log_id: string; meal_score: number | null }[]) {
+          if (r.meal_score != null) map[r.food_log_id] = r.meal_score;
+        }
+        setScores(map);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [logs.length]);
 
   const filtered = useMemo(
     () => logs.filter((l) => !query.trim() || l.label.toLowerCase().includes(query.toLowerCase())),
@@ -59,10 +89,9 @@ export function JournalView() {
       if (!m.has(k)) m.set(k, []);
       m.get(k)!.push(l);
     }
-    return Array.from(m.entries()); // already sorted desc by logged_at
+    return Array.from(m.entries());
   }, [filtered]);
 
-  // Last 7 day chips
   const dayChips = useMemo(() => {
     const arr: string[] = [];
     for (let i = 0; i < 7; i++) {
@@ -84,14 +113,20 @@ export function JournalView() {
         <p className="text-base text-muted-foreground">{t("journal.subtitle")}</p>
       </div>
 
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t("journal.searchPlaceholder")}
-          className="pl-9 h-12 rounded-xl text-base"
-        />
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("journal.searchPlaceholder")}
+            className="pl-9 h-12 rounded-xl text-base"
+          />
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setShowInsights(true)} className="h-12 rounded-xl gap-1 shrink-0">
+          <Sparkles className="w-4 h-4" />
+          <span className="hidden sm:inline">{lang === "es" ? "Perspectivas" : "Insights"}</span>
+        </Button>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1">
@@ -142,26 +177,51 @@ export function JournalView() {
               {items.map((entry) => {
                 const Icon = entryIcon(entry.type);
                 const SrcIcon = sourceIcon(entry.source);
+                const band = entry.type !== "med" ? scoreBand(scores[entry.id]) : null;
+                const clickable = entry.type !== "med";
                 return (
                   <Card key={entry.id} className="glass-card border-0">
                     <CardContent className="p-3 flex items-center gap-3">
                       <div className={cn("w-9 h-9 rounded-full flex items-center justify-center shrink-0", colorFor(entry.type))}>
                         <Icon className="w-4 h-4" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground truncate">{entry.label}</p>
+                      <button
+                        type="button"
+                        onClick={() => clickable && setSelected(entry)}
+                        disabled={!clickable}
+                        className="flex-1 min-w-0 text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-foreground truncate">{entry.label}</p>
+                          {band && (
+                            <Badge className={`${band.className} border-0 text-[10px] px-1.5 py-0`}>
+                              {band.emoji}
+                            </Badge>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <SrcIcon className="w-3.5 h-3.5" />
                           <span>{new Date(entry.logged_at).toLocaleTimeString(lang === "es" ? "es-ES" : "en-US", { hour: "numeric", minute: "2-digit" })}</span>
                           {entry.carbs_grams != null && <span className="text-primary font-medium">~{entry.carbs_grams}g</span>}
                           {entry.portion_size && <span className="capitalize">{entry.portion_size}</span>}
                         </div>
-                      </div>
+                      </button>
+                      {entry.type !== "med" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9"
+                          onClick={(e) => { e.stopPropagation(); toggleFavorite(entry.id); }}
+                          aria-label={entry.is_favorite ? "Unfavorite" : "Favorite"}
+                        >
+                          <Star className={cn("w-4 h-4", entry.is_favorite ? "fill-amber-400 text-amber-500" : "text-muted-foreground")} />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9 text-muted-foreground"
-                        onClick={() => deleteLog(entry.id)}
+                        onClick={(e) => { e.stopPropagation(); deleteLog(entry.id); }}
                         aria-label={t("journal.delete")}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -174,6 +234,9 @@ export function JournalView() {
           );
         })}
       </div>
+
+      <MealDetailSheet log={selected} open={!!selected} onOpenChange={(v) => !v && setSelected(null)} />
+      <FoodInsightsSheet open={showInsights} onOpenChange={setShowInsights} />
     </div>
   );
 }
