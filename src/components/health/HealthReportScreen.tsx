@@ -345,9 +345,50 @@ function HealthReportScreenInner({ onBack }: Props) {
       </div>
 
       {loading ? (
-        <div className="py-8 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+        <div className="py-12 flex flex-col items-center justify-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" aria-hidden="true" />
+          <p className="text-sm text-muted-foreground">{isEs ? "Generando reporte…" : "Generating report..."}</p>
+        </div>
+      ) : loadError || !report ? (
+        <Card className="border-destructive/40">
+          <CardContent className="p-5 space-y-3 text-center">
+            <AlertTriangle className="w-8 h-8 mx-auto text-destructive" aria-hidden="true" />
+            <h3 className="text-lg font-semibold">{isEs ? "No se pudo generar el reporte" : "Unable to Generate Report"}</h3>
+            <p className="text-sm text-muted-foreground">
+              {isEs ? "Tuvimos un problema al generar tu reporte." : "We encountered an issue while generating your report."}
+            </p>
+            <div className="flex justify-center gap-2 pt-2">
+              <Button onClick={() => void loadData()} className="rounded-xl">{isEs ? "Reintentar" : "Retry"}</Button>
+              <Button variant="outline" onClick={onBack} className="rounded-xl">{isEs ? "Volver" : "Go Back"}</Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : readings.length === 0 && logs.length === 0 && medEvents.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="p-5 space-y-3 text-center">
+            <Inbox className="w-8 h-8 mx-auto text-muted-foreground" aria-hidden="true" />
+            <h3 className="text-lg font-semibold">{isEs ? "No hay datos de salud" : "No Health Data Found"}</h3>
+            <p className="text-sm text-muted-foreground">
+              {isEs
+                ? "No encontramos datos de glucosa, comidas o medicamentos en este rango. Prueba con un rango distinto."
+                : "We couldn't find glucose, food, or medication data for the selected date range. Try selecting a different date range."}
+            </p>
+            <Button onClick={() => setRangeKey("30d")} className="rounded-xl">
+              {isEs ? "Cambiar rango" : "Change Date Range"}
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <>
+          {usingMock && (
+            <Card className="border-primary/40 bg-primary/5">
+              <CardContent className="p-3 text-xs text-primary">
+                {isEs
+                  ? "Vista previa con datos de ejemplo — aún no hay datos reales."
+                  : "Preview with sample data — you don't have real data yet."}
+              </CardContent>
+            </Card>
+          )}
           {/* Participant */}
           <ReportSection title={isEs ? "Participante" : "Participant"}>
             <KV label={isEs ? "Nombre" : "Name"} value={profile.name || "—"} />
@@ -358,38 +399,44 @@ function HealthReportScreenInner({ onBack }: Props) {
 
           {/* CGM summary */}
           <ReportSection title={isEs ? "Resumen MCG" : "CGM Summary"}>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <KV label={isEs ? "Promedio" : "Average"} value={metric(report.cgm.avg, "mg/dL")} />
-              <KV label="GMI" value={metric(report.cgm.gmi, "%")} />
-              <KV label={isEs ? "T. en Rango" : "Time In Range"} value={`${report.cgm.tir}%`} />
-              <KV label={isEs ? "T. sobre Rango" : "Time Above"} value={`${report.cgm.tar}%`} />
-              <KV label={isEs ? "T. bajo Rango" : "Time Below"} value={`${report.cgm.tbr}%`} />
-              <KV label={isEs ? "Máx" : "High"} value={metric(report.cgm.max, "mg/dL")} />
-              <KV label={isEs ? "Mín" : "Low"} value={metric(report.cgm.min, "mg/dL")} />
-              <KV label={isEs ? "Desv. Est." : "Std Dev"} value={metric(report.cgm.std, "mg/dL")} />
-              <KV label="CV" value={metric(report.cgm.cv, "%")} />
-              <KV label={isEs ? "Lecturas" : "Readings"} value={String(report.cgm.count)} />
-              <KV label={isEs ? "Uso sensor" : "Sensor wear"} value={metric(report.cgm.sensorWearPct, "%")} />
-            </div>
-            {trendData.length > 1 && (
-              <div className="h-48 mt-3">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trendData} margin={{ top: 5, right: 8, left: -20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="t" type="number" domain={["auto", "auto"]} tick={{ fontSize: 10 }} tickFormatter={(t) => new Date(t).toLocaleDateString(isEs ? "es-ES" : "en-US", { month: "numeric", day: "numeric" })} />
-                    <YAxis tick={{ fontSize: 10 }} />
-                    <Tooltip labelFormatter={(t) => new Date(t as number).toLocaleString(isEs ? "es-ES" : "en-US")} formatter={(v: number) => [`${v} mg/dL`, "Glucose"]} />
-                    <ReferenceLine y={180} stroke="hsl(var(--destructive))" strokeDasharray="3 3" />
-                    <ReferenceLine y={70} stroke="hsl(var(--destructive))" strokeDasharray="3 3" />
-                    <Line type="monotone" dataKey="mg_dl" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+            {report.cgm.count === 0 ? (
+              <p className="text-sm text-muted-foreground">{isEs ? "Sin datos de glucosa en este rango." : "No glucose data in this range."}</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <KV label={isEs ? "Promedio" : "Average"} value={metric(report.cgm.avg, "mg/dL")} />
+                  <KV label="GMI" value={metric(report.cgm.gmi, "%")} />
+                  <KV label={isEs ? "T. en Rango" : "Time In Range"} value={`${report.cgm.tir}%`} />
+                  <KV label={isEs ? "T. sobre Rango" : "Time Above"} value={`${report.cgm.tar}%`} />
+                  <KV label={isEs ? "T. bajo Rango" : "Time Below"} value={`${report.cgm.tbr}%`} />
+                  <KV label={isEs ? "Máx" : "High"} value={metric(report.cgm.max, "mg/dL")} />
+                  <KV label={isEs ? "Mín" : "Low"} value={metric(report.cgm.min, "mg/dL")} />
+                  <KV label={isEs ? "Desv. Est." : "Std Dev"} value={metric(report.cgm.std, "mg/dL")} />
+                  <KV label="CV" value={metric(report.cgm.cv, "%")} />
+                  <KV label={isEs ? "Lecturas" : "Readings"} value={String(report.cgm.count)} />
+                  <KV label={isEs ? "Uso sensor" : "Sensor wear"} value={metric(report.cgm.sensorWearPct, "%")} />
+                </div>
+                {trendData.length > 1 && (
+                  <div className="h-48 mt-3">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={trendData} margin={{ top: 5, right: 8, left: -20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="t" type="number" domain={["auto", "auto"]} tick={{ fontSize: 10 }} tickFormatter={(t) => new Date(t).toLocaleDateString(isEs ? "es-ES" : "en-US", { month: "numeric", day: "numeric" })} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip labelFormatter={(t) => new Date(t as number).toLocaleString(isEs ? "es-ES" : "en-US")} formatter={(v: number) => [`${v} mg/dL`, "Glucose"]} />
+                        <ReferenceLine y={180} stroke="hsl(var(--destructive))" strokeDasharray="3 3" />
+                        <ReferenceLine y={70} stroke="hsl(var(--destructive))" strokeDasharray="3 3" />
+                        <Line type="monotone" dataKey="mg_dl" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </>
             )}
           </ReportSection>
 
           {/* Daily stats */}
-          {report.daily.length > 0 && (
+          {(report.daily?.length ?? 0) > 0 && (
             <ReportSection title={isEs ? "Estadísticas diarias" : "Daily Statistics"}>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
@@ -399,9 +446,9 @@ function HealthReportScreenInner({ onBack }: Props) {
                   <tbody>
                     {report.daily.map((d) => (
                       <tr key={d.date} className="border-t border-border">
-                        <td className="py-1.5">{d.date}</td><td className="text-center">{d.avg}</td>
-                        <td className="text-center">{d.tir}%</td><td className="text-center">{d.max}</td>
-                        <td className="text-center">{d.min}</td><td className="text-center">{d.count}</td>
+                        <td className="py-1.5">{d.date}</td><td className="text-center">{d.avg ?? "—"}</td>
+                        <td className="text-center">{d.tir}%</td><td className="text-center">{d.max ?? "—"}</td>
+                        <td className="text-center">{d.min ?? "—"}</td><td className="text-center">{d.count}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -413,10 +460,10 @@ function HealthReportScreenInner({ onBack }: Props) {
           {/* Food */}
           <ReportSection title={isEs ? "Comidas" : "Food Log"}>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <KV label={isEs ? "Total" : "Total"} value={String(report.foodSummary.total)} />
-              <KV label={isEs ? "Carbos prom." : "Avg carbs"} value={metric(report.foodSummary.avgCarbs, "g")} />
+              <KV label={isEs ? "Total" : "Total"} value={String(report.foodSummary?.total ?? 0)} />
+              <KV label={isEs ? "Carbos prom." : "Avg carbs"} value={metric(report.foodSummary?.avgCarbs, "g")} />
             </div>
-            {report.foodSummary.top.length > 0 && (
+            {(report.foodSummary?.top?.length ?? 0) > 0 && (
               <div className="mt-2 space-y-1">
                 <p className="text-xs font-medium text-muted-foreground">{isEs ? "Más frecuentes" : "Most frequent"}</p>
                 {report.foodSummary.top.map((t) => (
@@ -431,9 +478,9 @@ function HealthReportScreenInner({ onBack }: Props) {
           {/* Medications */}
           <ReportSection title={isEs ? "Medicamentos" : "Medications"}>
             <div className="grid grid-cols-3 gap-2 text-sm">
-              <KV label={isEs ? "Total" : "Total"} value={String(report.medSummary.total)} />
-              <KV label={isEs ? "Insulina" : "Insulin"} value={String(report.medSummary.insulinCount)} />
-              <KV label={isEs ? "Otros" : "Other"} value={String(report.medSummary.otherCount)} />
+              <KV label={isEs ? "Total" : "Total"} value={String(report.medSummary?.total ?? 0)} />
+              <KV label={isEs ? "Insulina" : "Insulin"} value={String(report.medSummary?.insulinCount ?? 0)} />
+              <KV label={isEs ? "Otros" : "Other"} value={String(report.medSummary?.otherCount ?? 0)} />
             </div>
           </ReportSection>
 
