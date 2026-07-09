@@ -102,10 +102,10 @@ export function computeCgmStats(readings: CgmReading[], startISO: string, endISO
   const durationMs = new Date(endISO).getTime() - new Date(startISO).getTime();
   const days = Math.max(1, durationMs / 86400000);
   const expected = days * 288;
-  const sensorWearPct = expected > 0 ? Math.min(100, (readings.length / expected) * 100) : null;
+  const sensorWearPct = expected > 0 ? Math.min(100, (safe.length / expected) * 100) : null;
 
   return {
-    count: readings.length,
+    count: safe.length,
     avg: Math.round(avg * 10) / 10,
     gmi: Math.round(gmi * 100) / 100,
     tir: Math.round((inRange / values.length) * 1000) / 10,
