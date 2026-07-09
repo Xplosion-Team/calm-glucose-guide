@@ -44,6 +44,33 @@ export function HealthTab() {
       {/* Medications */}
       <MedicationsLinkCard />
 
+      {/* Health Report */}
+      <button
+        onClick={() => setShowReport(true)}
+        className="w-full text-left touch-target"
+        aria-label={lang === "es" ? "Abrir Reporte de Salud" : "Open Health Report"}
+      >
+        <Card className="glass-card border-0 hover:bg-accent/40 transition-colors">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <FileText className="w-6 h-6" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-foreground">
+                📄 {lang === "es" ? "Reporte de Salud" : "Health Report"}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {lang === "es"
+                  ? "Genere un resumen de su glucosa, comidas y medicamentos para su equipo de atención o investigación."
+                  : "Generate a summary of your glucose, meals, and medications for your care or research team."}
+              </p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+          </CardContent>
+        </Card>
+      </button>
+
+
       {/* Today summary */}
       <section aria-labelledby="today-heading" className="space-y-3">
         <div className="flex items-center justify-between">
