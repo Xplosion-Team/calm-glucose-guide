@@ -125,6 +125,16 @@ export function TodayTab() {
         }}
       />
 
+      <RecentMeals />
+      <FavoriteMeals />
+
+      <div className="flex justify-end">
+        <Button variant="ghost" size="sm" onClick={() => setShowInsights(true)} className="gap-1 text-primary">
+          <Sparkles className="w-4 h-4" /> {lang === "es" ? "Perspectivas de comida" : "Food Insights"}
+        </Button>
+      </div>
+
+
       {/* Quick option buttons */}
       <div className="grid grid-cols-3 gap-2">
         {QUICK_OPTIONS.map(({ type, labelKey, icon: Icon }) => {
