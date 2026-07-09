@@ -20,7 +20,7 @@ import { renderHealthReportPdf, healthReportCsv } from "@/lib/healthReportPdf";
 
 // Toggle to visually verify the screen with fabricated data when the account
 // has no CGM / food / medication entries yet. Set to false before production.
-const ENABLE_MOCK_FALLBACK = true;
+const ENABLE_MOCK_FALLBACK = false;
 
 function buildMockData(): {
   readings: CgmReading[]; logs: FoodLogRow[]; medEvents: MedEventRow[]; medications: MedicationRow[];
