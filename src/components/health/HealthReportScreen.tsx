@@ -209,7 +209,6 @@ function HealthReportScreenInner({ onBack }: Props) {
   }, [readings, logs, medEvents, medications, startISO, endISO, isEs]);
 
   useEffect(() => { if (report) console.log("[HealthReport] report", report); }, [report]);
-  );
 
   const trendData = useMemo(
     () => readings.map((r) => ({ t: new Date(r.ts).getTime(), mg_dl: Number(r.mg_dl) })),
