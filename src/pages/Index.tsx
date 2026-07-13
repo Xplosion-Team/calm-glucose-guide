@@ -115,7 +115,7 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const { data, isLoading, refresh, isDexcom } = useGlucoseData();
+  const { data, isLoading, refresh, isDexcom, noT1PalData } = useGlucoseData();
   const {
     tourRunning,
     checklist,
@@ -216,7 +216,7 @@ const Index = () => {
               />
               {journeySub === "today" && <TodayTab />}
               {journeySub === "now" && (
-                <NowTab data={data} isDexcom={isDexcom} onRefresh={refresh} />
+                <NowTab data={data} isDexcom={isDexcom} onRefresh={refresh} noT1PalData={noT1PalData} />
               )}
               {journeySub === "progress" && (
                 <JourneyTab currentGlucose={currentGlucose} />
