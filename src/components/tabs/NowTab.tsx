@@ -69,6 +69,42 @@ export function NowTab({ data, isDexcom, onRefresh, noT1PalData = false }: NowTa
   );
 
 
+  if (noT1PalData) {
+    return (
+      <div className="py-8 space-y-6 animate-fade-in">
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6 flex flex-col items-center text-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
+              <Activity className="w-7 h-7 text-muted-foreground" aria-hidden="true" />
+            </div>
+            <h2 className="text-xl font-semibold">No CGM data yet</h2>
+            <p className="text-base text-muted-foreground leading-relaxed max-w-sm">
+              We haven't received any glucose readings from T1Pal yet.
+              This can take a few minutes after you first connect, or if
+              your sensor is warming up.
+            </p>
+            <div className="flex items-start gap-2 text-sm text-muted-foreground bg-accent/40 rounded-xl p-3 w-full text-left">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
+              <span>
+                Make sure your sensor is active and your T1Pal site is
+                receiving data.
+              </span>
+            </div>
+            <div className="flex gap-2 flex-wrap justify-center pt-1">
+              <Button onClick={onRefresh} className="touch-target gap-2">
+                <RefreshCw className="w-5 h-5" aria-hidden="true" />
+                Check again
+              </Button>
+              <Button variant="outline" asChild className="touch-target">
+                <Link to="/settings/t1pal">T1Pal settings</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <>
       <div
