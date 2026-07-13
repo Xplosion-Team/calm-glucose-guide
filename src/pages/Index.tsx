@@ -216,7 +216,7 @@ const Index = () => {
               />
               {journeySub === "today" && <TodayTab />}
               {journeySub === "now" && (
-                <NowTab data={data} isDexcom={isDexcom} onRefresh={refresh} />
+                <NowTab data={data} isDexcom={isDexcom} onRefresh={refresh} noT1PalData={noT1PalData} />
               )}
               {journeySub === "progress" && (
                 <JourneyTab currentGlucose={currentGlucose} />
