@@ -125,6 +125,9 @@ export function useGlucoseData() {
   // Renamed conceptually to "isLive" but kept as isDexcom for backwards
   // compatibility with consumers (NowTab, Index) until they migrate.
   const [isDexcom, setIsDexcom] = useState(false);
+  // True when the user has a T1Pal connection saved but we couldn't
+  // find any CGM readings for them yet (sync hasn't produced data).
+  const [noT1PalData, setNoT1PalData] = useState(false);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
@@ -132,6 +135,8 @@ export function useGlucoseData() {
     // Prefer Nightscout/Dexcom data stored in cgm_readings.
     let reading: GlucoseReading | null = null;
     let isLive = false;
+    let hasT1PalConnection = false;
+    let hasCgmRows = false;
     try {
       // Trigger Nightscout + T1Pal syncs so "Check again" pulls the
       // freshest readings before we query cgm_readings. Best-effort:
@@ -141,6 +146,17 @@ export function useGlucoseData() {
         supabase.functions.invoke("sync-t1pal-readings", { body: {} }),
       ]);
 
+      // Check whether the user actually has a T1Pal connection saved.
+      try {
+        const { data: t1pal } = await (supabase as any)
+          .from("t1pal_connections")
+          .select("id")
+          .maybeSingle();
+        hasT1PalConnection = !!t1pal;
+      } catch (err) {
+        console.warn("t1pal_connections check error:", err);
+      }
+
       const { data: cgm } = await supabase
         .from("cgm_readings")
         .select("mg_dl, ts")
@@ -148,6 +164,7 @@ export function useGlucoseData() {
         .limit(2);
 
       if (cgm && cgm.length >= 1) {
+        hasCgmRows = true;
         const latest = cgm[0];
         const prev = cgm[1] ?? cgm[0];
         const latestTs = new Date(latest.ts).getTime();
@@ -182,6 +199,7 @@ export function useGlucoseData() {
     }
     if (!reading) reading = generateDemoReading();
     setIsDexcom(isLive);
+    setNoT1PalData(hasT1PalConnection && !hasCgmRows);
 
     // Pull recent medication events (last 24h) so the interpreter can
     // factor in insulin / oral agents that are still working.
@@ -245,5 +263,5 @@ export function useGlucoseData() {
     return () => clearInterval(interval);
   }, [refresh]);
 
-  return { data, isLoading, refresh, isDexcom };
+  return { data, isLoading, refresh, isDexcom, noT1PalData };
 }
