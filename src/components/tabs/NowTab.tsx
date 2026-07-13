@@ -1,6 +1,8 @@
 import { useMemo } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Activity, AlertCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { GlucoseDisplay } from "@/components/GlucoseDisplay";
 import { MessageCard } from "@/components/MessageCard";
 import { SuggestionCard } from "@/components/SuggestionCard";
@@ -13,9 +15,10 @@ interface NowTabProps {
   data: GlucoseData;
   isDexcom: boolean;
   onRefresh: () => void;
+  noT1PalData?: boolean;
 }
 
-export function NowTab({ data, isDexcom, onRefresh }: NowTabProps) {
+export function NowTab({ data, isDexcom, onRefresh, noT1PalData = false }: NowTabProps) {
   const {
     currentGlucose,
     predictedGlucose30min,
