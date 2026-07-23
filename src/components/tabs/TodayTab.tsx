@@ -12,6 +12,7 @@ import { RecentMeals } from "@/components/today/RecentMeals";
 import { FavoriteMeals } from "@/components/today/FavoriteMeals";
 import { JournalView } from "@/components/journal/JournalView";
 import { FoodInsightsSheet } from "@/components/insights/FoodInsightsSheet";
+import { DailyInsightCard } from "@/components/insights/DailyInsightCard";
 import type { TranslationKey } from "@/i18n/translations";
 
 const QUICK_OPTIONS: { type: EntryType; labelKey: TranslationKey; icon: typeof Apple }[] = [
