@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { CheckCircle2, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -12,10 +12,16 @@ interface PostGameQuestionProps {
 }
 
 export function PostGameQuestion({ onDone, recentlySeenIds = [], onAnswered }: PostGameQuestionProps) {
-  const question = useMemo(() => pickRandomQuestion(recentlySeenIds), [recentlySeenIds]);
+  // Pick ONCE on mount and lock it for the lifetime of this component instance.
+  // Previously this used useMemo([recentlySeenIds]); onAnswered mutated that
+  // array in the parent, which recomputed the question mid-flow and caused
+  // the displayed question, selected answer, and feedback to belong to
+  // different questions (validation looked correct but feedback was stale).
+  const [question] = useState(() => pickRandomQuestion(recentlySeenIds));
   const [selected, setSelected] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
-  const isCorrect = revealed && selected === question.options[question.answerIndex];
+  const correctOption = question.options[question.answerIndex];
+  const isCorrect = revealed && selected === correctOption;
 
   return (
     <div className="space-y-5">
@@ -79,6 +85,16 @@ export function PostGameQuestion({ onDone, recentlySeenIds = [], onAnswered }: P
             className="flex-1 touch-target text-lg"
             disabled={!selected}
             onClick={() => {
+              const picked = selected;
+              const correct = picked === correctOption;
+              // Temporary diagnostic logging for the validation bug.
+              console.log("[PostGameQuestion]", {
+                questionId: question.id,
+                questionText: question.q,
+                selected: picked,
+                correctAnswer: correctOption,
+                result: correct ? "correct" : "incorrect",
+              });
               setRevealed(true);
               onAnswered?.(question.id);
             }}
