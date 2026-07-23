@@ -169,6 +169,48 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_insights: {
+        Row: {
+          created_at: string
+          data_sufficiency: string
+          factors_used: Json
+          id: string
+          insight_date: string
+          metrics: Json
+          missed_events: Json
+          model_version: string | null
+          narrative: string | null
+          recommendations: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_sufficiency?: string
+          factors_used?: Json
+          id?: string
+          insight_date: string
+          metrics?: Json
+          missed_events?: Json
+          model_version?: string | null
+          narrative?: string | null
+          recommendations?: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data_sufficiency?: string
+          factors_used?: Json
+          id?: string
+          insight_date?: string
+          metrics?: Json
+          missed_events?: Json
+          model_version?: string | null
+          narrative?: string | null
+          recommendations?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       dexcom_tokens: {
         Row: {
           access_token: string
@@ -581,6 +623,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_prefs: {
+        Row: {
+          daily_insight_enabled: boolean
+          daily_insight_hour: number
+          quiet_end_hour: number | null
+          quiet_start_hour: number | null
+          spike_enabled: boolean
+          spike_sensitivity: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          daily_insight_enabled?: boolean
+          daily_insight_hour?: number
+          quiet_end_hour?: number | null
+          quiet_start_hour?: number | null
+          spike_enabled?: boolean
+          spike_sensitivity?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          daily_insight_enabled?: boolean
+          daily_insight_hour?: number
+          quiet_end_hour?: number | null
+          quiet_start_hour?: number | null
+          spike_enabled?: boolean
+          spike_sensitivity?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       phone_otps: {
         Row: {
           code: string
@@ -776,6 +851,59 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      spike_events: {
+        Row: {
+          associated_food_log_id: string | null
+          baseline_mg_dl: number
+          created_at: string
+          detected_at: string
+          id: string
+          peak_mg_dl: number
+          responded_at: string | null
+          rise_mg_dl: number
+          sensitivity: string
+          user_id: string
+          user_response: string
+          window_min: number
+        }
+        Insert: {
+          associated_food_log_id?: string | null
+          baseline_mg_dl: number
+          created_at?: string
+          detected_at?: string
+          id?: string
+          peak_mg_dl: number
+          responded_at?: string | null
+          rise_mg_dl: number
+          sensitivity: string
+          user_id: string
+          user_response?: string
+          window_min: number
+        }
+        Update: {
+          associated_food_log_id?: string | null
+          baseline_mg_dl?: number
+          created_at?: string
+          detected_at?: string
+          id?: string
+          peak_mg_dl?: number
+          responded_at?: string | null
+          rise_mg_dl?: number
+          sensitivity?: string
+          user_id?: string
+          user_response?: string
+          window_min?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spike_events_associated_food_log_id_fkey"
+            columns: ["associated_food_log_id"]
+            isOneToOne: false
+            referencedRelation: "food_logs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       t1pal_connections: {
         Row: {
