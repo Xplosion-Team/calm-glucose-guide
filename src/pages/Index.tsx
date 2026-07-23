@@ -27,6 +27,8 @@ import { JourneyTab } from "@/components/tabs/JourneyTab";
 import { CirclesTab } from "@/components/tabs/CirclesTab";
 import { HealthTab } from "@/components/tabs/HealthTab";
 import { useGlucoseData } from "@/hooks/useGlucoseData";
+import { useSpikeDetection } from "@/hooks/useSpikeDetection";
+import { SpikeBanner } from "@/components/spike/SpikeBanner";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useI18n } from "@/i18n/I18nProvider";
 import { getGreeting } from "@/lib/glucose-interpreter";
