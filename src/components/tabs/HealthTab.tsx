@@ -44,7 +44,11 @@ export function HealthTab() {
       <T1PalConnectSection />
 
       {/* Medications */}
+      {/* Medications */}
       <MedicationsLinkCard />
+
+      {/* Coaching reminder preferences */}
+      <NotificationPrefsCard />
 
       {/* Health Report */}
       <button
