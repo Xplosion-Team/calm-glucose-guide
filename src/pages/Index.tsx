@@ -118,7 +118,7 @@ const Index = () => {
   }, [navigate]);
 
   const { data, isLoading, refresh, isDexcom, noT1PalData } = useGlucoseData();
-  const { pending: pendingSpike, respond: respondSpike } = useSpikeDetection(data.timestamp);
+  const { pending: pendingSpike, respond: respondSpike } = useSpikeDetection(data?.timestamp);
   const goToTodayLog = () => { setActiveTab("journey"); setJourneySub("today"); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const {
     tourRunning,
