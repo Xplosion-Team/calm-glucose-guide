@@ -32,7 +32,7 @@ type MedClass =
   | "other";
 
 interface PredictBody {
-  meal: {
+  meal?: {
     label: string;
     logged_at?: string;
     carbs_g: number;
@@ -48,6 +48,9 @@ interface PredictBody {
   horizon_min?: number;
   mode?: string;
   question?: string;
+  category?: "eat" | "drink" | "activity" | "sleep" | "meds";
+  detail?: string;
+
 }
 
 interface CgmReading { ts: string; mg_dl: number; trend?: string | null; source?: string | null }
