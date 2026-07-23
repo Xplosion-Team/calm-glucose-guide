@@ -114,6 +114,8 @@ export function TodayTab() {
         <p className="text-lg text-muted-foreground">{t("today.subtitle")}</p>
       </div>
 
+      <DailyInsightCard onLogMissed={() => setActiveType("food")} />
+
       <SmartLogCard
         onConfirm={(r) => {
           addLog({
