@@ -447,38 +447,240 @@ Deno.serve(async (req) => {
 
     // ----- What-If narrative mode -----
     if (body?.mode === "what_if" && body.question) {
+      const category = body.category ?? "eat";
+      const detail = (body.detail ?? body.question).toLowerCase();
+
+      // --- Extended historical context (30d CGM, 90d meals + responses) ---
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
+
+      const [cgm30Res, foodRes, respRes] = await Promise.all([
+        supabase
+          .from("cgm_readings")
+          .select("ts,mg_dl")
+          .eq("user_id", userId)
+          .gte("ts", thirtyDaysAgo)
+          .order("ts", { ascending: false })
+          .limit(9000),
+        supabase
+          .from("food_logs")
+          .select("id,label,carbs_grams,portion_size,logged_at,type")
+          .eq("user_id", userId)
+          .gte("logged_at", ninetyDaysAgo)
+          .order("logged_at", { ascending: false })
+          .limit(200),
+        supabase
+          .from("meal_responses")
+          .select("food_log_id,peak_mg_dl,glucose_rise,time_to_peak_min,recovery_time_min,meal_score,baseline_mg_dl")
+          .eq("user_id", userId)
+          .order("computed_at", { ascending: false })
+          .limit(200),
+      ]);
+
+      const cgm30 = (cgm30Res.data ?? []) as { ts: string; mg_dl: number }[];
+      const foods = (foodRes.data ?? []) as { id: string; label: string; carbs_grams: number | null; portion_size: string | null; logged_at: string; type: string }[];
+      const responses = (respRes.data ?? []) as { food_log_id: string; peak_mg_dl: number | null; glucose_rise: number | null; time_to_peak_min: number | null; recovery_time_min: number | null; meal_score: number | null; baseline_mg_dl: number | null }[];
+
+      // 30d/7d CGM stats
+      const stat = (rows: { mg_dl: number }[]) => {
+        if (rows.length === 0) return null;
+        const vals = rows.map((r) => Number(r.mg_dl));
+        const mean = vals.reduce((a, v) => a + v, 0) / vals.length;
+        const variance = vals.reduce((a, v) => a + (v - mean) ** 2, 0) / Math.max(1, vals.length - 1);
+        const inRange = vals.filter((v) => v >= 70 && v <= 180).length;
+        return {
+          n: vals.length,
+          avg: Math.round(mean),
+          sd: Math.round(Math.sqrt(variance)),
+          tir_pct: Math.round((100 * inRange) / vals.length),
+        };
+      };
+      const cgm30Stats = stat(cgm30);
+      const cgm7Stats = stat(cgm30.filter((r) => r.ts >= sevenDaysAgo));
+
+      // Similar meal matching by keyword overlap
+      const stop = new Set(["a","an","the","of","with","and","some","my","this","that","to","for","in","on"]);
+      const detailTokens = detail.split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !stop.has(w));
+      const respByFood = new Map(responses.map((r) => [r.food_log_id, r] as const));
+      const similar = foods
+        .map((f) => {
+          const label = (f.label ?? "").toLowerCase();
+          const overlap = detailTokens.filter((t) => label.includes(t)).length;
+          return { food: f, overlap, resp: respByFood.get(f.id) };
+        })
+        .filter((s) => s.overlap > 0)
+        .sort((a, b) => b.overlap - a.overlap || (b.resp ? 1 : 0) - (a.resp ? 1 : 0))
+        .slice(0, 8);
+
+      const similarWithResp = similar.filter((s) => s.resp && s.resp.peak_mg_dl != null);
+      const avg = (nums: number[]) => nums.length ? Math.round(nums.reduce((a, v) => a + v, 0) / nums.length) : null;
+      const similarSummary = similarWithResp.length
+        ? {
+            count: similarWithResp.length,
+            avg_peak: avg(similarWithResp.map((s) => Number(s.resp!.peak_mg_dl))),
+            avg_rise: avg(similarWithResp.map((s) => Number(s.resp!.glucose_rise ?? 0))),
+            avg_time_to_peak: avg(similarWithResp.map((s) => Number(s.resp!.time_to_peak_min ?? 0)).filter(Boolean)),
+            avg_recovery_min: avg(similarWithResp.map((s) => Number(s.resp!.recovery_time_min ?? 0)).filter(Boolean)),
+            examples: similarWithResp.slice(0, 3).map((s) => ({ label: s.food.label, carbs: s.food.carbs_grams, peak: s.resp!.peak_mg_dl })),
+          }
+        : { count: 0, examples: similar.slice(0, 3).map((s) => ({ label: s.food.label, carbs: s.food.carbs_grams })) };
+
+      // Trend descriptor
+      const t = cgmSummary.trend_mg_dl_per_min;
+      const trendLabel = t > 1.5 ? "rising fast" : t > 0.5 ? "rising" : t < -1.5 ? "falling fast" : t < -0.5 ? "falling" : "stable";
+
+      // Local Digital-Twin physics prediction (only when eating/drinking)
+      let prediction: null | {
+        predicted_peak_mg_dl: number;
+        band_lo_mg_dl: number;
+        band_hi_mg_dl: number;
+        time_to_peak_min: number;
+        return_to_range_min: number | null;
+        confidence_pct: number;
+        assumed_carbs_g: number;
+      } = null;
+
+      if (category === "eat" || category === "drink") {
+        // Estimate carbs: median of similar meals, else portion-based fallback.
+        const carbSamples = similar.map((s) => s.food.carbs_grams).filter((c): c is number => typeof c === "number" && c > 0);
+        const carbGuess = carbSamples.length
+          ? carbSamples.sort((a, b) => a - b)[Math.floor(carbSamples.length / 2)]
+          : (category === "drink" ? 20 : 45);
+
+        const { curve, peak, confidence } = predictCurve({
+          baseline: cgmSummary.baseline_mg_dl,
+          trend_mg_dl_per_min: cgmSummary.trend_mg_dl_per_min,
+          variability_sd: cgmSummary.variability_sd,
+          carbs_g: carbGuess,
+          fat_g: 0, protein_g: 0, fiber_g: 0,
+          horizon_min: 240,
+          insulin_sensitivity: (params.S_I ?? 1.0),
+          beta_responsivity: (params.Phi ?? 0.7),
+          med: medEffect,
+        });
+        // Return to sub-140 after the peak
+        const idxPeak = curve.findIndex((p) => p.t_min === peak.t_min);
+        const backInRange = curve.slice(idxPeak).find((p) => p.mg_dl < 140);
+        // Safety margin: ±20 mg/dL floor for sensor + model uncertainty
+        const margin = Math.max(20, Math.round(peak.hi - peak.mg_dl));
+        prediction = {
+          predicted_peak_mg_dl: Math.round(peak.mg_dl),
+          band_lo_mg_dl: Math.round(peak.mg_dl - margin),
+          band_hi_mg_dl: Math.round(peak.mg_dl + margin),
+          time_to_peak_min: peak.t_min,
+          return_to_range_min: backInRange ? backInRange.t_min - peak.t_min : null,
+          confidence_pct: Math.round(confidence * 100),
+          assumed_carbs_g: carbGuess,
+        };
+      }
+
+      // Data sufficiency label
+      const dataSufficiency: "full" | "partial" | "sparse" =
+        cgm30Stats && cgm30Stats.n > 500 && similarSummary.count >= 2
+          ? "full"
+          : (cgmSummary.source === "t1pal" || similar.length > 0)
+            ? "partial"
+            : "sparse";
+
+      // Build rich context and ask the LLM for a personalized, structured response
       const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-      let insight =
-        "Small, steady choices usually make the biggest difference. Try this and notice how your body responds — your care team's guidance comes first.";
+      const hour = now.getHours();
+      const partOfDay = hour < 11 ? "morning" : hour < 15 ? "midday" : hour < 20 ? "evening" : "night";
+
+      const activeMeds = medEffect.active_medications.filter((m) => m.on_board);
+      const context = {
+        question: body.question,
+        category,
+        detail,
+        time_of_day: partOfDay,
+        current: {
+          glucose_mg_dl: Math.round(cgmSummary.baseline_mg_dl),
+          trend: trendLabel,
+          trend_mg_dl_per_min: cgmSummary.trend_mg_dl_per_min,
+          cgm_source: cgmSummary.source,
+          last_reading_age_min: cgmSummary.last_reading_age_min,
+        },
+        cgm_history: {
+          last_7d: cgm7Stats,
+          last_30d: cgm30Stats,
+          personal_variability_sd: cgmSummary.variability_sd,
+        },
+        similar_meals: similarSummary,
+        medications: {
+          on_board: activeMeds.map((m) => ({ name: m.name, class: m.med_class, taken_min_ago: m.taken_minutes_ago })),
+          prescribed_total: meds.length,
+          physiologic_notes: medEffect.reasons,
+        },
+        twin_prediction: prediction,
+        data_sufficiency: dataSufficiency,
+      };
+
+      let insight = "";
+      let aiExtras: unknown = null;
 
       if (lovableKey) {
         try {
-          const sys =
-            "You are Calm Glucose Guide, a warm, plain-English companion for adults living with type 2 diabetes. " +
-            "Answer 'what if' questions in 2-3 short sentences. Be supportive, never clinical. " +
-            "Do NOT give medical advice, doses, or specific glucose targets. " +
-            "Mention this is an estimate and to check with their care team for anything important.";
-          const medSummary =
-            medEffect.active_medications.filter((m) => m.on_board).map((m) => m.name).join(", ") || "none on board";
-          const userPrompt =
-            `Recent glucose ~${Math.round(cgmSummary.baseline_mg_dl)} mg/dL (` +
-            `${cgmSummary.source === "t1pal" ? "from T1Pal CGM" : "no live CGM"}). ` +
-            `Active medications: ${medSummary}. Question: ${body.question}`;
+          const sys = [
+            "You are the Calm Glucose Digital Twin coach for adults with type 2 diabetes.",
+            "You MUST personalize every answer using the JSON CONTEXT below. Do not give generic advice.",
+            "Cite the user's own numbers (recent glucose, trend, 7d/30d avg, TIR, similar-meal history) whenever they are present.",
+            "If a value is null or missing, do not invent it — say what data would make the prediction sharper.",
+            "Rules: warm plain English at a 6th-grade reading level; never prescribe doses; never give hard clinical targets; always frame predictions as estimates with a ±20 mg/dL uncertainty band; never contradict the user's care team.",
+            "Return STRICT JSON only, matching this shape:",
+            "{",
+            '  "narrative": "2-4 sentences that answer the question using the twin_prediction and history",',
+            '  "recommendations": [ { "title": "short action", "why": "explain using the user\'s own history/numbers", "expected_change_mg_dl": number|null, "confidence_pct": number, "difficulty": "easy"|"moderate"|"harder" } ],',
+            '  "factors_used": ["short bullet strings naming which context fields shaped the answer"],',
+            '  "caveat": "one plain sentence reminding this is an estimate and to check with their care team"',
+            "}",
+            "Rank recommendations by expected_change_mg_dl (largest safe reduction first). Return 2-3 recommendations. Never return markdown or extra prose outside the JSON.",
+          ].join(" ");
+
           const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
             headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
             body: JSON.stringify({
               model: "google/gemini-2.5-flash",
+              response_format: { type: "json_object" },
               messages: [
                 { role: "system", content: sys },
-                { role: "user", content: userPrompt },
+                { role: "user", content: "CONTEXT:\n" + JSON.stringify(context) },
               ],
             }),
           });
+
           if (res.ok) {
             const j = await res.json();
-            const txt = j?.choices?.[0]?.message?.content;
-            if (typeof txt === "string" && txt.trim()) insight = txt.trim();
+            const txt: string = j?.choices?.[0]?.message?.content ?? "";
+            try {
+              const parsed = JSON.parse(txt);
+              aiExtras = parsed;
+              const parts: string[] = [];
+              if (typeof parsed.narrative === "string") parts.push(parsed.narrative.trim());
+              if (prediction) {
+                parts.push(
+                  `Estimated peak ~${prediction.predicted_peak_mg_dl} mg/dL ` +
+                  `(range ${prediction.band_lo_mg_dl}–${prediction.band_hi_mg_dl}) about ${prediction.time_to_peak_min} min after — ` +
+                  `confidence ${prediction.confidence_pct}%.`
+                );
+              }
+              if (Array.isArray(parsed.recommendations) && parsed.recommendations.length) {
+                parts.push("What might help:");
+                parsed.recommendations.slice(0, 3).forEach((r: { title?: string; why?: string; expected_change_mg_dl?: number | null; confidence_pct?: number }, i: number) => {
+                  const chg = typeof r.expected_change_mg_dl === "number" ? ` (~${r.expected_change_mg_dl > 0 ? "-" : "+"}${Math.abs(r.expected_change_mg_dl)} mg/dL, ${r.confidence_pct ?? 0}% confidence)` : "";
+                  parts.push(`${i + 1}. ${r.title ?? "Try this"}${chg} — ${r.why ?? ""}`.trim());
+                });
+              }
+              if (Array.isArray(parsed.factors_used) && parsed.factors_used.length) {
+                parts.push("This used: " + parsed.factors_used.slice(0, 6).join(" • "));
+              }
+              if (typeof parsed.caveat === "string") parts.push(parsed.caveat);
+              insight = parts.filter(Boolean).join("\n\n");
+            } catch {
+              // If the model returned prose, use it as-is.
+              insight = txt.trim();
+            }
           } else {
             console.error("what_if AI non-ok", res.status, await res.text());
           }
@@ -487,11 +689,47 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Deterministic fallback when the LLM is unavailable — still personalized
+      // from the twin + history so the user never sees generic advice.
+      if (!insight) {
+        const bits: string[] = [];
+        bits.push(
+          `Right now you're around ${Math.round(cgmSummary.baseline_mg_dl)} mg/dL and ${trendLabel}` +
+          (cgmSummary.source === "t1pal" ? " (from your T1Pal CGM)." : "."),
+        );
+        if (prediction) {
+          bits.push(
+            `Based on your Digital Twin, this could bring you to about ${prediction.predicted_peak_mg_dl} mg/dL ` +
+            `(range ${prediction.band_lo_mg_dl}–${prediction.band_hi_mg_dl}) in ~${prediction.time_to_peak_min} min, ` +
+            `with ${prediction.confidence_pct}% confidence.`,
+          );
+        }
+        if (similarSummary.count > 0 && similarSummary.avg_peak) {
+          bits.push(
+            `You've logged ${similarSummary.count} similar meal(s); they averaged a peak near ${similarSummary.avg_peak} mg/dL.`,
+          );
+        }
+        if (cgm30Stats) {
+          bits.push(`Your 30-day time-in-range is ${cgm30Stats.tir_pct}% with an average of ${cgm30Stats.avg} mg/dL.`);
+        }
+        if (dataSufficiency === "sparse") {
+          bits.push("Once we have more of your CGM and meal history, these estimates will get sharper.");
+        }
+        bits.push("This is an estimate with a ±20 mg/dL uncertainty band — always follow your care team's guidance.");
+        insight = bits.join("\n\n");
+      }
+
       return new Response(
         JSON.stringify({
           mode: "what_if",
           question: body.question,
           insight_text: insight,
+          prediction,
+          recommendations: (aiExtras as { recommendations?: unknown })?.recommendations ?? null,
+          factors_used: (aiExtras as { factors_used?: unknown })?.factors_used ?? null,
+          similar_meals: similarSummary,
+          cgm_stats: { last_7d: cgm7Stats, last_30d: cgm30Stats },
+          data_sufficiency: dataSufficiency,
           model_version: MODEL_VERSION,
           data_sources: dataSources,
         }),
@@ -500,6 +738,7 @@ Deno.serve(async (req) => {
     }
 
     // ----- Meal-prediction mode -----
+
     if (!body?.meal?.label || typeof body.meal.carbs_g !== "number") {
       return new Response(JSON.stringify({ error: "meal.label and meal.carbs_g required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
