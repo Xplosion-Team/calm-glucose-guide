@@ -210,7 +210,16 @@ const Index = () => {
           </div>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 space-y-4">
+          {pendingSpike && (
+            <SpikeBanner
+              spike={pendingSpike}
+              onLogMeal={() => { respondSpike("log_meal"); goToTodayLog(); }}
+              onLogDrink={() => { respondSpike("log_drink"); goToTodayLog(); }}
+              onNotFood={() => respondSpike("not_food")}
+              onDismiss={() => respondSpike("dismissed")}
+            />
+          )}
           {activeTab === "journey" && (
             <>
               <SubNav<JourneySub>
