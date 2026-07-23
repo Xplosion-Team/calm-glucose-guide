@@ -10,6 +10,7 @@ import { useHealthKit } from "@/hooks/useHealthKit";
 import { DEFAULT_METRICS } from "@/services/health";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n/I18nProvider";
+import { NotificationPrefsCard } from "@/components/settings/NotificationPrefsCard";
 
 export function HealthTab() {
   const { snapshot, isLoading, refresh, provider } = useHealthKit();
@@ -43,7 +44,11 @@ export function HealthTab() {
       <T1PalConnectSection />
 
       {/* Medications */}
+      {/* Medications */}
       <MedicationsLinkCard />
+
+      {/* Coaching reminder preferences */}
+      <NotificationPrefsCard />
 
       {/* Health Report */}
       <button

@@ -12,6 +12,7 @@ import { RecentMeals } from "@/components/today/RecentMeals";
 import { FavoriteMeals } from "@/components/today/FavoriteMeals";
 import { JournalView } from "@/components/journal/JournalView";
 import { FoodInsightsSheet } from "@/components/insights/FoodInsightsSheet";
+import { DailyInsightCard } from "@/components/insights/DailyInsightCard";
 import type { TranslationKey } from "@/i18n/translations";
 
 const QUICK_OPTIONS: { type: EntryType; labelKey: TranslationKey; icon: typeof Apple }[] = [
@@ -112,6 +113,8 @@ export function TodayTab() {
         <h2 className="text-2xl font-semibold text-foreground mb-1">{t("today.title")}</h2>
         <p className="text-lg text-muted-foreground">{t("today.subtitle")}</p>
       </div>
+
+      <DailyInsightCard onLogMissed={() => setActiveType("food")} />
 
       <SmartLogCard
         onConfirm={(r) => {

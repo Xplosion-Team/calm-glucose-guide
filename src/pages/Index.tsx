@@ -27,6 +27,8 @@ import { JourneyTab } from "@/components/tabs/JourneyTab";
 import { CirclesTab } from "@/components/tabs/CirclesTab";
 import { HealthTab } from "@/components/tabs/HealthTab";
 import { useGlucoseData } from "@/hooks/useGlucoseData";
+import { useSpikeDetection } from "@/hooks/useSpikeDetection";
+import { SpikeBanner } from "@/components/spike/SpikeBanner";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useI18n } from "@/i18n/I18nProvider";
 import { getGreeting } from "@/lib/glucose-interpreter";
@@ -116,6 +118,8 @@ const Index = () => {
   }, [navigate]);
 
   const { data, isLoading, refresh, isDexcom, noT1PalData } = useGlucoseData();
+  const { pending: pendingSpike, respond: respondSpike } = useSpikeDetection(data.timestamp);
+  const goToTodayLog = () => { setActiveTab("journey"); setJourneySub("today"); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const {
     tourRunning,
     checklist,
@@ -206,7 +210,16 @@ const Index = () => {
           </div>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 space-y-4">
+          {pendingSpike && (
+            <SpikeBanner
+              spike={pendingSpike}
+              onLogMeal={() => { respondSpike("log_meal"); goToTodayLog(); }}
+              onLogDrink={() => { respondSpike("log_drink"); goToTodayLog(); }}
+              onNotFood={() => respondSpike("not_food")}
+              onDismiss={() => respondSpike("dismissed")}
+            />
+          )}
           {activeTab === "journey" && (
             <>
               <SubNav<JourneySub>
