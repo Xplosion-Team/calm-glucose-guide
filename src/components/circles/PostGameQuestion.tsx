@@ -85,6 +85,16 @@ export function PostGameQuestion({ onDone, recentlySeenIds = [], onAnswered }: P
             className="flex-1 touch-target text-lg"
             disabled={!selected}
             onClick={() => {
+              const picked = selected;
+              const correct = picked === correctOption;
+              // Temporary diagnostic logging for the validation bug.
+              console.log("[PostGameQuestion]", {
+                questionId: question.id,
+                questionText: question.q,
+                selected: picked,
+                correctAnswer: correctOption,
+                result: correct ? "correct" : "incorrect",
+              });
               setRevealed(true);
               onAnswered?.(question.id);
             }}
