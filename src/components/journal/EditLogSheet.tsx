@@ -166,7 +166,12 @@ export function EditLogSheet({ log, open, onOpenChange, onSave }: Props) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="rounded-t-3xl max-h-[92vh] overflow-y-auto">
         <SheetHeader className="text-left">
-          <SheetTitle className="text-2xl">{es ? "Editar entrada" : "Edit entry"}</SheetTitle>
+          <SheetTitle className="text-2xl">
+            {log?.id
+              ? es ? "Editar entrada" : "Edit entry"
+              : es ? "Nueva entrada" : "New entry"}
+          </SheetTitle>
+
         </SheetHeader>
 
         <div className="space-y-4 pt-4 pb-8">
