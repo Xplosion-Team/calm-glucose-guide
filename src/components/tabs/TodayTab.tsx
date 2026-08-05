@@ -69,8 +69,36 @@ export function TodayTab() {
   const [customText, setCustomText] = useState("");
   const [showJournal, setShowJournal] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
-  const [editing, setEditing] = useState<FoodLog | null>(null);
+  const [editing, setEditing] = useState<EditableLog | null>(null);
+  const [draftSource, setDraftSource] = useState<Source>("manual");
   const [deleting, setDeleting] = useState<FoodLog | null>(null);
+
+  /** New entries open the detail sheet first so the user can fill in the rest before saving. */
+  const openDraft = (draft: EditableLog, source: Source) => {
+    setDraftSource(source);
+    setEditing(draft);
+  };
+
+  const saveFromSheet = async (
+    id: string | undefined,
+    patch: {
+      type: EntryType;
+      label: string;
+      carbsGrams: number | null;
+      portionSize: import("@/hooks/useFoodLogs").PortionSize | null;
+      loggedAt: string;
+      notes: string | null;
+      proteinG?: number | null;
+      fatG?: number | null;
+      fiberG?: number | null;
+      sugarG?: number | null;
+      calories?: number | null;
+    },
+  ) => {
+    if (id) return updateLog(id, patch);
+    return addLog({ ...patch, source: draftSource });
+  };
+
 
 
   const todayKey = new Date().toISOString().slice(0, 10);
