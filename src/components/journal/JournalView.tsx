@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { MealDetailSheet } from "@/components/journal/MealDetailSheet";
 import { EditLogSheet } from "@/components/journal/EditLogSheet";
+import { DeleteLogDialog } from "@/components/journal/DeleteLogDialog";
 import { FoodInsightsSheet } from "@/components/insights/FoodInsightsSheet";
 import { scoreBand } from "@/hooks/useMealFeatures";
 
