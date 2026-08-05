@@ -246,8 +246,11 @@ export type Database = {
       }
       food_logs: {
         Row: {
+          calories: number | null
           carbs_grams: number | null
           created_at: string
+          fat_g: number | null
+          fiber_g: number | null
           id: string
           image_url: string | null
           is_favorite: boolean
@@ -255,13 +258,18 @@ export type Database = {
           logged_at: string
           notes: string | null
           portion_size: string | null
+          protein_g: number | null
           source: string
+          sugar_g: number | null
           type: string
           user_id: string
         }
         Insert: {
+          calories?: number | null
           carbs_grams?: number | null
           created_at?: string
+          fat_g?: number | null
+          fiber_g?: number | null
           id?: string
           image_url?: string | null
           is_favorite?: boolean
@@ -269,13 +277,18 @@ export type Database = {
           logged_at?: string
           notes?: string | null
           portion_size?: string | null
+          protein_g?: number | null
           source?: string
+          sugar_g?: number | null
           type: string
           user_id: string
         }
         Update: {
+          calories?: number | null
           carbs_grams?: number | null
           created_at?: string
+          fat_g?: number | null
+          fiber_g?: number | null
           id?: string
           image_url?: string | null
           is_favorite?: boolean
@@ -283,7 +296,9 @@ export type Database = {
           logged_at?: string
           notes?: string | null
           portion_size?: string | null
+          protein_g?: number | null
           source?: string
+          sugar_g?: number | null
           type?: string
           user_id?: string
         }

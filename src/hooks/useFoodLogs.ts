@@ -16,7 +16,13 @@ export interface FoodLog {
   is_favorite?: boolean;
   image_url?: string | null;
   notes?: string | null;
+  protein_g?: number | null;
+  fat_g?: number | null;
+  fiber_g?: number | null;
+  sugar_g?: number | null;
+  calories?: number | null;
 }
+
 
 export interface NewLog {
   type: EntryType;
@@ -99,18 +105,31 @@ export function useFoodLogs() {
   );
 
   const updateLog = useCallback(async (id: string, patch: {
+    type?: EntryType;
     label?: string;
     carbsGrams?: number | null;
     portionSize?: PortionSize | null;
     loggedAt?: string;
     notes?: string | null;
+    proteinG?: number | null;
+    fatG?: number | null;
+    fiberG?: number | null;
+    sugarG?: number | null;
+    calories?: number | null;
   }) => {
     const payload: Record<string, unknown> = {};
+    if (patch.type !== undefined) payload.type = patch.type;
     if (patch.label !== undefined) payload.label = patch.label;
     if (patch.carbsGrams !== undefined) payload.carbs_grams = patch.carbsGrams;
     if (patch.portionSize !== undefined) payload.portion_size = patch.portionSize;
     if (patch.loggedAt !== undefined) payload.logged_at = patch.loggedAt;
     if (patch.notes !== undefined) payload.notes = patch.notes;
+    if (patch.proteinG !== undefined) payload.protein_g = patch.proteinG;
+    if (patch.fatG !== undefined) payload.fat_g = patch.fatG;
+    if (patch.fiberG !== undefined) payload.fiber_g = patch.fiberG;
+    if (patch.sugarG !== undefined) payload.sugar_g = patch.sugarG;
+    if (patch.calories !== undefined) payload.calories = patch.calories;
+
     if (Object.keys(payload).length === 0) return null;
 
     const { data, error } = await supabase
