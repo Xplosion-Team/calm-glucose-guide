@@ -6,14 +6,16 @@ import { Input } from "@/components/ui/input";
 import { useScreenContext } from "@/hooks/useScreenContext";
 import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
-import { useFoodLogs, type EntryType, type Source } from "@/hooks/useFoodLogs";
+import { useFoodLogs, type EntryType, type Source, type FoodLog } from "@/hooks/useFoodLogs";
 import { SmartLogCard } from "@/components/today/SmartLogCard";
 import { RecentMeals } from "@/components/today/RecentMeals";
 import { FavoriteMeals } from "@/components/today/FavoriteMeals";
 import { JournalView } from "@/components/journal/JournalView";
+import { EditLogSheet } from "@/components/journal/EditLogSheet";
 import { FoodInsightsSheet } from "@/components/insights/FoodInsightsSheet";
 import { DailyInsightCard } from "@/components/insights/DailyInsightCard";
 import type { TranslationKey } from "@/i18n/translations";
+
 
 const QUICK_OPTIONS: { type: EntryType; labelKey: TranslationKey; icon: typeof Apple }[] = [
   { type: "food", labelKey: "today.food", icon: Apple },
