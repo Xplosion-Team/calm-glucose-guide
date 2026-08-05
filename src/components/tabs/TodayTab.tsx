@@ -63,12 +63,13 @@ const sourceIcon = (s: Source) => {
 
 export function TodayTab() {
   const { t, lang } = useI18n();
-  const { logs, addLog, updateLog } = useFoodLogs();
+  const { logs, addLog, updateLog, deleteLog } = useFoodLogs();
   const [activeType, setActiveType] = useState<EntryType | null>(null);
   const [customText, setCustomText] = useState("");
   const [showJournal, setShowJournal] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
   const [editing, setEditing] = useState<FoodLog | null>(null);
+  const [deleting, setDeleting] = useState<FoodLog | null>(null);
 
 
   const todayKey = new Date().toISOString().slice(0, 10);
