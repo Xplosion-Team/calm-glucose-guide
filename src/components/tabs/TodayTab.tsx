@@ -273,6 +273,12 @@ export function TodayTab() {
         onOpenChange={(v) => !v && setEditing(null)}
         onSave={updateLog}
       />
+      <DeleteLogDialog
+        log={deleting}
+        open={!!deleting}
+        onOpenChange={(v) => !v && setDeleting(null)}
+        onConfirm={deleteLog}
+      />
       <FoodInsightsSheet open={showInsights} onOpenChange={setShowInsights} />
 
     </div>
