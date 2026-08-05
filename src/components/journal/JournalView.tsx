@@ -237,7 +237,7 @@ export function JournalView() {
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9 text-muted-foreground"
-                        onClick={(e) => { e.stopPropagation(); deleteLog(entry.id); }}
+                        onClick={(e) => { e.stopPropagation(); setDeleting(entry); }}
                         aria-label={t("journal.delete")}
                       >
                         <Trash2 className="w-4 h-4" />
