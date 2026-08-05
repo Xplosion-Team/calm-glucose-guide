@@ -93,7 +93,7 @@ export function EditLogSheet({ log, open, onOpenChange, onSave }: Props) {
     setLabel(log.label);
     setCarbs(log.carbs_grams != null ? String(log.carbs_grams) : "");
     setPortion(log.portion_size ?? null);
-    setWhen(toLocalInput(log.logged_at));
+    setWhen(toLocalInput(log.logged_at ?? new Date().toISOString()));
     setNotes(log.notes ?? "");
     setEstimate(null);
     setNutrition(null);
