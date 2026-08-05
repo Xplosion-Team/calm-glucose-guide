@@ -24,12 +24,24 @@ interface EditPatch {
   calories?: number | null;
 }
 
+/** A saved log (has an id) or a draft entry not yet written to the database. */
+export interface EditableLog {
+  id?: string;
+  type: EntryType;
+  label: string;
+  carbs_grams?: number | null;
+  portion_size?: PortionSize | null;
+  logged_at?: string;
+  notes?: string | null;
+}
+
 interface Props {
-  log: FoodLog | null;
+  log: EditableLog | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  onSave: (id: string, patch: EditPatch) => Promise<unknown>;
+  onSave: (id: string | undefined, patch: EditPatch) => Promise<unknown>;
 }
+
 
 interface NutritionEstimate {
   carbsGrams: number;
