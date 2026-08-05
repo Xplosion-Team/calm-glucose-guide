@@ -57,6 +57,7 @@ export function JournalView() {
   const [selected, setSelected] = useState<FoodLog | null>(null);
   const [editing, setEditing] = useState<FoodLog | null>(null);
   const [deleting, setDeleting] = useState<FoodLog | null>(null);
+  const [showInsights, setShowInsights] = useState(false);
   const [scores, setScores] = useState<Record<string, number>>({});
 
 
