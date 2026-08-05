@@ -9,8 +9,10 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { MealDetailSheet } from "@/components/journal/MealDetailSheet";
+import { EditLogSheet } from "@/components/journal/EditLogSheet";
 import { FoodInsightsSheet } from "@/components/insights/FoodInsightsSheet";
 import { scoreBand } from "@/hooks/useMealFeatures";
+
 
 const entryIcon = (type: EntryType) =>
   type === "food" ? Apple : type === "drink" ? Coffee : Pill;
@@ -48,12 +50,14 @@ function fmtDay(d: string, lang: string) {
 
 export function JournalView() {
   const { t, lang } = useI18n();
-  const { logs, loading, deleteLog, toggleFavorite } = useFoodLogs();
+  const { logs, loading, deleteLog, toggleFavorite, updateLog } = useFoodLogs();
   const [query, setQuery] = useState("");
   const [activeDay, setActiveDay] = useState<string | null>(null);
   const [selected, setSelected] = useState<FoodLog | null>(null);
+  const [editing, setEditing] = useState<FoodLog | null>(null);
   const [showInsights, setShowInsights] = useState(false);
   const [scores, setScores] = useState<Record<string, number>>({});
+
 
   // Load meal scores in bulk so we can badge journal entries.
   useEffect(() => {
@@ -221,6 +225,16 @@ export function JournalView() {
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9 text-muted-foreground"
+                        onClick={(e) => { e.stopPropagation(); setEditing(entry); }}
+                        aria-label={lang === "es" ? "Editar" : "Edit"}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-muted-foreground"
                         onClick={(e) => { e.stopPropagation(); deleteLog(entry.id); }}
                         aria-label={t("journal.delete")}
                       >
@@ -236,6 +250,13 @@ export function JournalView() {
       </div>
 
       <MealDetailSheet log={selected} open={!!selected} onOpenChange={(v) => !v && setSelected(null)} />
+      <EditLogSheet
+        log={editing}
+        open={!!editing}
+        onOpenChange={(v) => !v && setEditing(null)}
+        onSave={updateLog}
+      />
+
       <FoodInsightsSheet open={showInsights} onOpenChange={setShowInsights} />
     </div>
   );

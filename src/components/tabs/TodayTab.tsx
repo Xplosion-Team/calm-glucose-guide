@@ -6,14 +6,16 @@ import { Input } from "@/components/ui/input";
 import { useScreenContext } from "@/hooks/useScreenContext";
 import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
-import { useFoodLogs, type EntryType, type Source } from "@/hooks/useFoodLogs";
+import { useFoodLogs, type EntryType, type Source, type FoodLog } from "@/hooks/useFoodLogs";
 import { SmartLogCard } from "@/components/today/SmartLogCard";
 import { RecentMeals } from "@/components/today/RecentMeals";
 import { FavoriteMeals } from "@/components/today/FavoriteMeals";
 import { JournalView } from "@/components/journal/JournalView";
+import { EditLogSheet } from "@/components/journal/EditLogSheet";
 import { FoodInsightsSheet } from "@/components/insights/FoodInsightsSheet";
 import { DailyInsightCard } from "@/components/insights/DailyInsightCard";
 import type { TranslationKey } from "@/i18n/translations";
+
 
 const QUICK_OPTIONS: { type: EntryType; labelKey: TranslationKey; icon: typeof Apple }[] = [
   { type: "food", labelKey: "today.food", icon: Apple },
@@ -61,11 +63,13 @@ const sourceIcon = (s: Source) => {
 
 export function TodayTab() {
   const { t, lang } = useI18n();
-  const { logs, addLog } = useFoodLogs();
+  const { logs, addLog, updateLog } = useFoodLogs();
   const [activeType, setActiveType] = useState<EntryType | null>(null);
   const [customText, setCustomText] = useState("");
   const [showJournal, setShowJournal] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
+  const [editing, setEditing] = useState<FoodLog | null>(null);
+
 
   const todayKey = new Date().toISOString().slice(0, 10);
   const todayLogs = useMemo(
@@ -226,10 +230,17 @@ export function TodayTab() {
                       {entry.portion_size && <span>{t(PORTION_KEYS[entry.portion_size])}</span>}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setEditing(entry)}
+                    aria-label={lang === "es" ? "Editar entrada" : "Edit entry"}
+                    className="flex items-center gap-1 text-sm text-muted-foreground shrink-0 hover:text-primary transition-colors"
+                  >
                     <Clock className="w-3.5 h-3.5" />
                     {new Date(entry.logged_at).toLocaleTimeString(lang === "es" ? "es-ES" : "en-US", { hour: "numeric", minute: "2-digit" })}
-                  </div>
+                    <Pencil className="w-3.5 h-3.5 ml-1" />
+                  </button>
+
                 </CardContent>
               </Card>
             );
@@ -247,7 +258,14 @@ export function TodayTab() {
         </div>
       )}
 
+      <EditLogSheet
+        log={editing}
+        open={!!editing}
+        onOpenChange={(v) => !v && setEditing(null)}
+        onSave={updateLog}
+      />
       <FoodInsightsSheet open={showInsights} onOpenChange={setShowInsights} />
+
     </div>
   );
 }

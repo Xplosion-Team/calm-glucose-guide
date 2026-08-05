@@ -98,10 +98,49 @@ export function useFoodLogs() {
     [],
   );
 
+  const updateLog = useCallback(async (id: string, patch: {
+    label?: string;
+    carbsGrams?: number | null;
+    portionSize?: PortionSize | null;
+    loggedAt?: string;
+    notes?: string | null;
+  }) => {
+    const payload: Record<string, unknown> = {};
+    if (patch.label !== undefined) payload.label = patch.label;
+    if (patch.carbsGrams !== undefined) payload.carbs_grams = patch.carbsGrams;
+    if (patch.portionSize !== undefined) payload.portion_size = patch.portionSize;
+    if (patch.loggedAt !== undefined) payload.logged_at = patch.loggedAt;
+    if (patch.notes !== undefined) payload.notes = patch.notes;
+    if (Object.keys(payload).length === 0) return null;
+
+    const { data, error } = await supabase
+      .from("food_logs")
+      .update(payload as never)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) {
+      console.error("Update log failed", error);
+      return null;
+    }
+    const saved = data as FoodLog;
+    setLogs((prev) =>
+      prev
+        .map((l) => (l.id === id ? saved : l))
+        .sort((a, b) => (a.logged_at < b.logged_at ? 1 : -1)),
+    );
+    // Time or carbs changed -> glucose response window changed, recompute in background.
+    if ((saved.type === "food" || saved.type === "drink") && (patch.loggedAt || patch.carbsGrams !== undefined)) {
+      void triggerMealAnalysis(saved.id);
+    }
+    return saved;
+  }, []);
+
   const deleteLog = useCallback(async (id: string) => {
     const { error } = await supabase.from("food_logs").delete().eq("id", id);
     if (!error) setLogs((prev) => prev.filter((l) => l.id !== id));
   }, []);
+
 
   const toggleFavorite = useCallback(async (id: string) => {
     setLogs((prev) => prev.map((l) => l.id === id ? { ...l, is_favorite: !l.is_favorite } : l));
@@ -117,5 +156,5 @@ export function useFoodLogs() {
     }
   }, [logs]);
 
-  return { logs, loading, addLog, deleteLog, refresh, toggleFavorite };
+  return { logs, loading, addLog, updateLog, deleteLog, refresh, toggleFavorite };
 }
