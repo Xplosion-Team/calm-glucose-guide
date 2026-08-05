@@ -27,12 +27,19 @@ export interface FoodLog {
 export interface NewLog {
   type: EntryType;
   label: string;
-  carbsGrams?: number;
-  portionSize?: PortionSize;
+  carbsGrams?: number | null;
+  portionSize?: PortionSize | null;
   source?: Source;
   imageUrl?: string;
   loggedAt?: string;
+  notes?: string | null;
+  proteinG?: number | null;
+  fatG?: number | null;
+  fiberG?: number | null;
+  sugarG?: number | null;
+  calories?: number | null;
 }
+
 
 async function triggerMealAnalysis(foodLogId: string) {
   try {
