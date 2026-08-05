@@ -156,5 +156,5 @@ export function useFoodLogs() {
     }
   }, [logs]);
 
-  return { logs, loading, addLog, deleteLog, refresh, toggleFavorite };
+  return { logs, loading, addLog, updateLog, deleteLog, refresh, toggleFavorite };
 }
