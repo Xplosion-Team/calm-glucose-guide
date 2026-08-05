@@ -258,7 +258,14 @@ export function TodayTab() {
         </div>
       )}
 
+      <EditLogSheet
+        log={editing}
+        open={!!editing}
+        onOpenChange={(v) => !v && setEditing(null)}
+        onSave={updateLog}
+      />
       <FoodInsightsSheet open={showInsights} onOpenChange={setShowInsights} />
+
     </div>
   );
 }
