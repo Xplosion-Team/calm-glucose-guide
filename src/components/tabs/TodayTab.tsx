@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Apple, Coffee, Pill, Plus, Check, Clock, BookOpen, ArrowLeft, Camera, Type as TypeIcon, Mic, MessageSquare, Pencil, Sparkles } from "lucide-react";
+import { Apple, Coffee, Pill, Plus, Check, Clock, BookOpen, ArrowLeft, Camera, Type as TypeIcon, Mic, MessageSquare, Pencil, Sparkles, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { RecentMeals } from "@/components/today/RecentMeals";
 import { FavoriteMeals } from "@/components/today/FavoriteMeals";
 import { JournalView } from "@/components/journal/JournalView";
 import { EditLogSheet } from "@/components/journal/EditLogSheet";
+import { DeleteLogDialog } from "@/components/journal/DeleteLogDialog";
 import { FoodInsightsSheet } from "@/components/insights/FoodInsightsSheet";
 import { DailyInsightCard } from "@/components/insights/DailyInsightCard";
 import type { TranslationKey } from "@/i18n/translations";
@@ -63,12 +64,13 @@ const sourceIcon = (s: Source) => {
 
 export function TodayTab() {
   const { t, lang } = useI18n();
-  const { logs, addLog, updateLog } = useFoodLogs();
+  const { logs, addLog, updateLog, deleteLog } = useFoodLogs();
   const [activeType, setActiveType] = useState<EntryType | null>(null);
   const [customText, setCustomText] = useState("");
   const [showJournal, setShowJournal] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
   const [editing, setEditing] = useState<FoodLog | null>(null);
+  const [deleting, setDeleting] = useState<FoodLog | null>(null);
 
 
   const todayKey = new Date().toISOString().slice(0, 10);
@@ -240,7 +242,15 @@ export function TodayTab() {
                     {new Date(entry.logged_at).toLocaleTimeString(lang === "es" ? "es-ES" : "en-US", { hour: "numeric", minute: "2-digit" })}
                     <Pencil className="w-3.5 h-3.5 ml-1" />
                   </button>
-
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-muted-foreground shrink-0"
+                    onClick={() => setDeleting(entry)}
+                    aria-label={lang === "es" ? "Eliminar entrada" : "Delete entry"}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </CardContent>
               </Card>
             );
@@ -263,6 +273,12 @@ export function TodayTab() {
         open={!!editing}
         onOpenChange={(v) => !v && setEditing(null)}
         onSave={updateLog}
+      />
+      <DeleteLogDialog
+        log={deleting}
+        open={!!deleting}
+        onOpenChange={(v) => !v && setDeleting(null)}
+        onConfirm={deleteLog}
       />
       <FoodInsightsSheet open={showInsights} onOpenChange={setShowInsights} />
 

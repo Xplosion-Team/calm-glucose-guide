@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { MealDetailSheet } from "@/components/journal/MealDetailSheet";
 import { EditLogSheet } from "@/components/journal/EditLogSheet";
+import { DeleteLogDialog } from "@/components/journal/DeleteLogDialog";
 import { FoodInsightsSheet } from "@/components/insights/FoodInsightsSheet";
 import { scoreBand } from "@/hooks/useMealFeatures";
 
@@ -55,6 +56,7 @@ export function JournalView() {
   const [activeDay, setActiveDay] = useState<string | null>(null);
   const [selected, setSelected] = useState<FoodLog | null>(null);
   const [editing, setEditing] = useState<FoodLog | null>(null);
+  const [deleting, setDeleting] = useState<FoodLog | null>(null);
   const [showInsights, setShowInsights] = useState(false);
   const [scores, setScores] = useState<Record<string, number>>({});
 
@@ -235,7 +237,7 @@ export function JournalView() {
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9 text-muted-foreground"
-                        onClick={(e) => { e.stopPropagation(); deleteLog(entry.id); }}
+                        onClick={(e) => { e.stopPropagation(); setDeleting(entry); }}
                         aria-label={t("journal.delete")}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -256,6 +258,13 @@ export function JournalView() {
         onOpenChange={(v) => !v && setEditing(null)}
         onSave={updateLog}
       />
+      <DeleteLogDialog
+        log={deleting}
+        open={!!deleting}
+        onOpenChange={(v) => !v && setDeleting(null)}
+        onConfirm={deleteLog}
+      />
+
 
       <FoodInsightsSheet open={showInsights} onOpenChange={setShowInsights} />
     </div>
