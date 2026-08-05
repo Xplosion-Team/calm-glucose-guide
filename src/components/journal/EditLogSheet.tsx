@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import type { FoodLog, PortionSize, EntryType } from "@/hooks/useFoodLogs";
+import type { PortionSize, EntryType } from "@/hooks/useFoodLogs";
 
 interface EditPatch {
   type: EntryType;
@@ -24,12 +24,24 @@ interface EditPatch {
   calories?: number | null;
 }
 
+/** A saved log (has an id) or a draft entry not yet written to the database. */
+export interface EditableLog {
+  id?: string;
+  type: EntryType;
+  label: string;
+  carbs_grams?: number | null;
+  portion_size?: PortionSize | null;
+  logged_at?: string;
+  notes?: string | null;
+}
+
 interface Props {
-  log: FoodLog | null;
+  log: EditableLog | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  onSave: (id: string, patch: EditPatch) => Promise<unknown>;
+  onSave: (id: string | undefined, patch: EditPatch) => Promise<unknown>;
 }
+
 
 interface NutritionEstimate {
   carbsGrams: number;
@@ -81,7 +93,7 @@ export function EditLogSheet({ log, open, onOpenChange, onSave }: Props) {
     setLabel(log.label);
     setCarbs(log.carbs_grams != null ? String(log.carbs_grams) : "");
     setPortion(log.portion_size ?? null);
-    setWhen(toLocalInput(log.logged_at));
+    setWhen(toLocalInput(log.logged_at ?? new Date().toISOString()));
     setNotes(log.notes ?? "");
     setEstimate(null);
     setNutrition(null);
@@ -154,7 +166,12 @@ export function EditLogSheet({ log, open, onOpenChange, onSave }: Props) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="rounded-t-3xl max-h-[92vh] overflow-y-auto">
         <SheetHeader className="text-left">
-          <SheetTitle className="text-2xl">{es ? "Editar entrada" : "Edit entry"}</SheetTitle>
+          <SheetTitle className="text-2xl">
+            {log?.id
+              ? es ? "Editar entrada" : "Edit entry"
+              : es ? "Nueva entrada" : "New entry"}
+          </SheetTitle>
+
         </SheetHeader>
 
         <div className="space-y-4 pt-4 pb-8">
@@ -291,7 +308,12 @@ export function EditLogSheet({ log, open, onOpenChange, onSave }: Props) {
               {es ? "Cancelar" : "Cancel"}
             </Button>
             <Button className="flex-1 h-12 rounded-xl text-base" disabled={saving || !label.trim() || !when} onClick={save}>
-              {saving ? (es ? "Guardando…" : "Saving…") : es ? "Guardar" : "Save changes"}
+              {saving
+                ? es ? "Guardando…" : "Saving…"
+                : log?.id
+                  ? es ? "Guardar" : "Save changes"
+                  : es ? "Guardar entrada" : "Save entry"}
+
             </Button>
           </div>
         </div>

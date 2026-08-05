@@ -27,12 +27,19 @@ export interface FoodLog {
 export interface NewLog {
   type: EntryType;
   label: string;
-  carbsGrams?: number;
-  portionSize?: PortionSize;
+  carbsGrams?: number | null;
+  portionSize?: PortionSize | null;
   source?: Source;
   imageUrl?: string;
   loggedAt?: string;
+  notes?: string | null;
+  proteinG?: number | null;
+  fatG?: number | null;
+  fiberG?: number | null;
+  sugarG?: number | null;
+  calories?: number | null;
 }
+
 
 async function triggerMealAnalysis(foodLogId: string) {
   try {
@@ -84,6 +91,13 @@ export function useFoodLogs() {
       };
       if (entry.imageUrl) payload.image_url = entry.imageUrl;
       if (entry.loggedAt) payload.logged_at = entry.loggedAt;
+      if (entry.notes !== undefined) payload.notes = entry.notes;
+      if (entry.proteinG !== undefined) payload.protein_g = entry.proteinG;
+      if (entry.fatG !== undefined) payload.fat_g = entry.fatG;
+      if (entry.fiberG !== undefined) payload.fiber_g = entry.fiberG;
+      if (entry.sugarG !== undefined) payload.sugar_g = entry.sugarG;
+      if (entry.calories !== undefined) payload.calories = entry.calories;
+
       const { data, error } = await supabase
         .from("food_logs")
         .insert(payload as never)

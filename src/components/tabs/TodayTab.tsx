@@ -11,7 +11,7 @@ import { SmartLogCard } from "@/components/today/SmartLogCard";
 import { RecentMeals } from "@/components/today/RecentMeals";
 import { FavoriteMeals } from "@/components/today/FavoriteMeals";
 import { JournalView } from "@/components/journal/JournalView";
-import { EditLogSheet } from "@/components/journal/EditLogSheet";
+import { EditLogSheet, type EditableLog } from "@/components/journal/EditLogSheet";
 import { DeleteLogDialog } from "@/components/journal/DeleteLogDialog";
 import { FoodInsightsSheet } from "@/components/insights/FoodInsightsSheet";
 import { DailyInsightCard } from "@/components/insights/DailyInsightCard";
@@ -69,8 +69,36 @@ export function TodayTab() {
   const [customText, setCustomText] = useState("");
   const [showJournal, setShowJournal] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
-  const [editing, setEditing] = useState<FoodLog | null>(null);
+  const [editing, setEditing] = useState<EditableLog | null>(null);
+  const [draftSource, setDraftSource] = useState<Source>("manual");
   const [deleting, setDeleting] = useState<FoodLog | null>(null);
+
+  /** New entries open the detail sheet first so the user can fill in the rest before saving. */
+  const openDraft = (draft: EditableLog, source: Source) => {
+    setDraftSource(source);
+    setEditing(draft);
+  };
+
+  const saveFromSheet = async (
+    id: string | undefined,
+    patch: {
+      type: EntryType;
+      label: string;
+      carbsGrams: number | null;
+      portionSize: import("@/hooks/useFoodLogs").PortionSize | null;
+      loggedAt: string;
+      notes: string | null;
+      proteinG?: number | null;
+      fatG?: number | null;
+      fiberG?: number | null;
+      sugarG?: number | null;
+      calories?: number | null;
+    },
+  ) => {
+    if (id) return updateLog(id, patch);
+    return addLog({ ...patch, source: draftSource });
+  };
+
 
 
   const todayKey = new Date().toISOString().slice(0, 10);
@@ -108,10 +136,11 @@ export function TodayTab() {
   }
 
   const quickAdd = (type: EntryType, label: string) => {
-    addLog({ type, label, source: "manual" });
+    openDraft({ type, label }, "manual");
     setActiveType(null);
     setCustomText("");
   };
+
 
   return (
     <div className="space-y-5 animate-fade-in pb-4">
@@ -124,15 +153,18 @@ export function TodayTab() {
 
       <SmartLogCard
         onConfirm={(r) => {
-          addLog({
-            type: r.type,
-            label: r.label,
-            carbsGrams: r.carbsGrams,
-            portionSize: r.portionSize,
-            source: r.source,
-          });
+          openDraft(
+            {
+              type: r.type,
+              label: r.label,
+              carbs_grams: r.carbsGrams,
+              portion_size: r.portionSize,
+            },
+            r.source,
+          );
         }}
       />
+
 
       <RecentMeals />
       <FavoriteMeals />
@@ -272,7 +304,7 @@ export function TodayTab() {
         log={editing}
         open={!!editing}
         onOpenChange={(v) => !v && setEditing(null)}
-        onSave={updateLog}
+        onSave={saveFromSheet}
       />
       <DeleteLogDialog
         log={deleting}
