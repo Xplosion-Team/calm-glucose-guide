@@ -225,6 +225,16 @@ export function JournalView() {
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9 text-muted-foreground"
+                        onClick={(e) => { e.stopPropagation(); setEditing(entry); }}
+                        aria-label={lang === "es" ? "Editar" : "Edit"}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-muted-foreground"
                         onClick={(e) => { e.stopPropagation(); deleteLog(entry.id); }}
                         aria-label={t("journal.delete")}
                       >
