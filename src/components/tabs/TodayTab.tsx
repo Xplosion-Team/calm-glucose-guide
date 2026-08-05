@@ -304,7 +304,7 @@ export function TodayTab() {
         log={editing}
         open={!!editing}
         onOpenChange={(v) => !v && setEditing(null)}
-        onSave={updateLog}
+        onSave={saveFromSheet}
       />
       <DeleteLogDialog
         log={deleting}
