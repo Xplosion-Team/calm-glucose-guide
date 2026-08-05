@@ -308,7 +308,12 @@ export function EditLogSheet({ log, open, onOpenChange, onSave }: Props) {
               {es ? "Cancelar" : "Cancel"}
             </Button>
             <Button className="flex-1 h-12 rounded-xl text-base" disabled={saving || !label.trim() || !when} onClick={save}>
-              {saving ? (es ? "Guardando…" : "Saving…") : es ? "Guardar" : "Save changes"}
+              {saving
+                ? es ? "Guardando…" : "Saving…"
+                : log?.id
+                  ? es ? "Guardar" : "Save changes"
+                  : es ? "Guardar entrada" : "Save entry"}
+
             </Button>
           </div>
         </div>
