@@ -16,7 +16,13 @@ export interface FoodLog {
   is_favorite?: boolean;
   image_url?: string | null;
   notes?: string | null;
+  protein_g?: number | null;
+  fat_g?: number | null;
+  fiber_g?: number | null;
+  sugar_g?: number | null;
+  calories?: number | null;
 }
+
 
 export interface NewLog {
   type: EntryType;
