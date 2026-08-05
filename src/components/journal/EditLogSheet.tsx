@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import type { FoodLog, PortionSize, EntryType } from "@/hooks/useFoodLogs";
+import type { PortionSize, EntryType } from "@/hooks/useFoodLogs";
 
 interface EditPatch {
   type: EntryType;
