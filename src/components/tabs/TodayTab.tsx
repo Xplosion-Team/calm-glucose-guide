@@ -240,7 +240,15 @@ export function TodayTab() {
                     {new Date(entry.logged_at).toLocaleTimeString(lang === "es" ? "es-ES" : "en-US", { hour: "numeric", minute: "2-digit" })}
                     <Pencil className="w-3.5 h-3.5 ml-1" />
                   </button>
-
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-muted-foreground shrink-0"
+                    onClick={() => setDeleting(entry)}
+                    aria-label={lang === "es" ? "Eliminar entrada" : "Delete entry"}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </CardContent>
               </Card>
             );
