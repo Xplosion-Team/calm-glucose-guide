@@ -250,6 +250,13 @@ export function JournalView() {
       </div>
 
       <MealDetailSheet log={selected} open={!!selected} onOpenChange={(v) => !v && setSelected(null)} />
+      <EditLogSheet
+        log={editing}
+        open={!!editing}
+        onOpenChange={(v) => !v && setEditing(null)}
+        onSave={updateLog}
+      />
+
       <FoodInsightsSheet open={showInsights} onOpenChange={setShowInsights} />
     </div>
   );
