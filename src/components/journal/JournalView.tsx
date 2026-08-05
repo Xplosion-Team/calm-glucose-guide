@@ -50,12 +50,14 @@ function fmtDay(d: string, lang: string) {
 
 export function JournalView() {
   const { t, lang } = useI18n();
-  const { logs, loading, deleteLog, toggleFavorite } = useFoodLogs();
+  const { logs, loading, deleteLog, toggleFavorite, updateLog } = useFoodLogs();
   const [query, setQuery] = useState("");
   const [activeDay, setActiveDay] = useState<string | null>(null);
   const [selected, setSelected] = useState<FoodLog | null>(null);
+  const [editing, setEditing] = useState<FoodLog | null>(null);
   const [showInsights, setShowInsights] = useState(false);
   const [scores, setScores] = useState<Record<string, number>>({});
+
 
   // Load meal scores in bulk so we can badge journal entries.
   useEffect(() => {
