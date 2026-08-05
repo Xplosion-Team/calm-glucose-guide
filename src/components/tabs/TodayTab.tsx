@@ -230,10 +230,17 @@ export function TodayTab() {
                       {entry.portion_size && <span>{t(PORTION_KEYS[entry.portion_size])}</span>}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setEditing(entry)}
+                    aria-label={lang === "es" ? "Editar entrada" : "Edit entry"}
+                    className="flex items-center gap-1 text-sm text-muted-foreground shrink-0 hover:text-primary transition-colors"
+                  >
                     <Clock className="w-3.5 h-3.5" />
                     {new Date(entry.logged_at).toLocaleTimeString(lang === "es" ? "es-ES" : "en-US", { hour: "numeric", minute: "2-digit" })}
-                  </div>
+                    <Pencil className="w-3.5 h-3.5 ml-1" />
+                  </button>
+
                 </CardContent>
               </Card>
             );
