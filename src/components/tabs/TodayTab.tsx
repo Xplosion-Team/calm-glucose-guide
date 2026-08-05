@@ -136,10 +136,11 @@ export function TodayTab() {
   }
 
   const quickAdd = (type: EntryType, label: string) => {
-    addLog({ type, label, source: "manual" });
+    openDraft({ type, label }, "manual");
     setActiveType(null);
     setCustomText("");
   };
+
 
   return (
     <div className="space-y-5 animate-fade-in pb-4">
