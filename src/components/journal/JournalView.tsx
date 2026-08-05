@@ -56,7 +56,7 @@ export function JournalView() {
   const [activeDay, setActiveDay] = useState<string | null>(null);
   const [selected, setSelected] = useState<FoodLog | null>(null);
   const [editing, setEditing] = useState<FoodLog | null>(null);
-  const [showInsights, setShowInsights] = useState(false);
+  const [deleting, setDeleting] = useState<FoodLog | null>(null);
   const [scores, setScores] = useState<Record<string, number>>({});
 
 
