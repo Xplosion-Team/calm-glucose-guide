@@ -153,15 +153,18 @@ export function TodayTab() {
 
       <SmartLogCard
         onConfirm={(r) => {
-          addLog({
-            type: r.type,
-            label: r.label,
-            carbsGrams: r.carbsGrams,
-            portionSize: r.portionSize,
-            source: r.source,
-          });
+          openDraft(
+            {
+              type: r.type,
+              label: r.label,
+              carbs_grams: r.carbsGrams,
+              portion_size: r.portionSize,
+            },
+            r.source,
+          );
         }}
       />
+
 
       <RecentMeals />
       <FavoriteMeals />
