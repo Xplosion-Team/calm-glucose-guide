@@ -9,8 +9,10 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { MealDetailSheet } from "@/components/journal/MealDetailSheet";
+import { EditLogSheet } from "@/components/journal/EditLogSheet";
 import { FoodInsightsSheet } from "@/components/insights/FoodInsightsSheet";
 import { scoreBand } from "@/hooks/useMealFeatures";
+
 
 const entryIcon = (type: EntryType) =>
   type === "food" ? Apple : type === "drink" ? Coffee : Pill;
