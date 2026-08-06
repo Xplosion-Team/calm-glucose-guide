@@ -1,18 +1,18 @@
 import { Apple, Coffee, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useRecentMeals } from "@/hooks/useMealFeatures";
-import { useFoodLogs, type FoodLog } from "@/hooks/useFoodLogs";
+import type { EntryType } from "@/hooks/useFoodLogs";
 import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 
 interface Props {
-  onLogged?: (log: FoodLog) => void;
+  /** Prefills the entry sheet so the user can complete details before saving. */
+  onPick?: (draft: { type: EntryType; label: string; carbs_grams: number | null }) => void;
 }
 
-export function RecentMeals({ onLogged }: Props) {
+export function RecentMeals({ onPick }: Props) {
   const { t, lang } = useI18n();
   const { meals, loading } = useRecentMeals(10);
-  const { addLog } = useFoodLogs();
 
   if (loading || meals.length === 0) return null;
 
@@ -37,15 +37,9 @@ export function RecentMeals({ onLogged }: Props) {
           return (
             <button
               key={`${m.type}-${m.label}`}
-              onClick={async () => {
-                const saved = await addLog({
-                  type: m.type,
-                  label: m.label,
-                  carbsGrams: m.avgCarbs ?? undefined,
-                  source: "manual",
-                });
-                if (saved) onLogged?.(saved);
-              }}
+              onClick={() =>
+                onPick?.({ type: m.type, label: m.label, carbs_grams: m.avgCarbs ?? null })
+              }
               className={cn(
                 "shrink-0 w-40 snap-start text-left rounded-2xl border-2 border-border bg-card p-3 hover:border-primary/40 transition-all touch-target",
               )}

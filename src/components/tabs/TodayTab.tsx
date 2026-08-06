@@ -166,8 +166,8 @@ export function TodayTab() {
       />
 
 
-      <RecentMeals />
-      <FavoriteMeals />
+      <RecentMeals onPick={(d) => openDraft(d, "manual")} />
+      <FavoriteMeals onPick={(d) => openDraft(d, "manual")} />
 
       <div className="flex justify-end">
         <Button variant="ghost" size="sm" onClick={() => setShowInsights(true)} className="gap-1 text-primary">
