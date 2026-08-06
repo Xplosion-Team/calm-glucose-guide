@@ -307,7 +307,7 @@ export function EditLogSheet({ log, open, onOpenChange, onSave }: Props) {
             />
           </div>
 
-          <div className="flex gap-2 pt-2">
+          <div className="sticky bottom-0 -mx-6 px-6 pt-3 pb-2 bg-background border-t flex gap-2">
             <Button variant="outline" className="flex-1 h-12 rounded-xl text-base" onClick={() => onOpenChange(false)}>
               {es ? "Cancelar" : "Cancel"}
             </Button>
