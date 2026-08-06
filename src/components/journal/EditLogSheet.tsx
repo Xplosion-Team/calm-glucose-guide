@@ -164,7 +164,11 @@ export function EditLogSheet({ log, open, onOpenChange, onSave }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-3xl max-h-[92vh] overflow-y-auto">
+      <SheetContent
+        side="bottom"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="rounded-t-3xl max-h-[85dvh] overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] pb-[calc(env(safe-area-inset-bottom)+1rem)]"
+      >
         <SheetHeader className="text-left">
           <SheetTitle className="text-2xl">
             {log?.id
