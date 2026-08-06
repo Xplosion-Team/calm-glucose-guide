@@ -268,11 +268,11 @@ export function TodayTab() {
                     type="button"
                     onClick={() => setEditing(entry)}
                     aria-label={lang === "es" ? "Editar entrada" : "Edit entry"}
-                    className="flex items-center gap-1 text-sm text-muted-foreground shrink-0 hover:text-primary transition-colors"
+                    className="flex items-center gap-1 min-h-11 px-2 text-sm text-muted-foreground shrink-0 hover:text-primary active:text-primary transition-colors touch-manipulation select-none"
                   >
                     <Clock className="w-3.5 h-3.5" />
                     {new Date(entry.logged_at).toLocaleTimeString(lang === "es" ? "es-ES" : "en-US", { hour: "numeric", minute: "2-digit" })}
-                    <Pencil className="w-3.5 h-3.5 ml-1" />
+                    <Pencil className="w-4 h-4 ml-1" />
                   </button>
                   <Button
                     variant="ghost"
