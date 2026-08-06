@@ -164,7 +164,11 @@ export function EditLogSheet({ log, open, onOpenChange, onSave }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-3xl max-h-[92vh] overflow-y-auto">
+      <SheetContent
+        side="bottom"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="rounded-t-3xl max-h-[85dvh] overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] pb-[calc(env(safe-area-inset-bottom)+1rem)]"
+      >
         <SheetHeader className="text-left">
           <SheetTitle className="text-2xl">
             {log?.id
@@ -303,7 +307,7 @@ export function EditLogSheet({ log, open, onOpenChange, onSave }: Props) {
             />
           </div>
 
-          <div className="flex gap-2 pt-2">
+          <div className="sticky bottom-0 -mx-6 px-6 pt-3 pb-2 bg-background border-t flex gap-2">
             <Button variant="outline" className="flex-1 h-12 rounded-xl text-base" onClick={() => onOpenChange(false)}>
               {es ? "Cancelar" : "Cancel"}
             </Button>
