@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.schedule_meal_reminder() FROM PUBLIC, anon, authenticated;
