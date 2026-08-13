@@ -59,6 +59,25 @@ const Auth = () => {
       toast({ title: "Password too short", description: "Use at least 6 characters.", variant: "destructive" });
       return;
     }
+    const normalizedPhone = phone.trim() ? normalizePhone(phone) : "";
+    if (!isLogin) {
+      if (!normalizedPhone) {
+        toast({
+          title: "Phone number required",
+          description: "We use it to text your check-ins and let you log by text.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!E164_REGEX.test(normalizedPhone)) {
+        toast({
+          title: "Invalid phone number",
+          description: "Use international format with country code, e.g. +14155551234.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     setLoading(true);
     try {
       if (isLogin) {
@@ -74,7 +93,11 @@ const Auth = () => {
         const { error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
-          options: { emailRedirectTo: `${window.location.origin}/` },
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            // Saved on the account so check-in texts and text-logging work.
+            data: { phone: normalizedPhone },
+          },
         });
         if (error) throw error;
         toast({
@@ -88,6 +111,7 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
 
   const sendCode = async () => {
     const normalized = normalizePhone(phone);
@@ -147,9 +171,30 @@ const Auth = () => {
           access_token: data.session.access_token,
           refresh_token: data.session.refresh_token,
         });
+
+        // Attach the email address they gave us, if their account has none yet.
+        const trimmedEmail = email.trim();
+        if (trimmedEmail) {
+          const { data: u } = await supabase.auth.getUser();
+          if (u.user && !u.user.email) {
+            const { error: emailError } = await supabase.auth.updateUser(
+              { email: trimmedEmail },
+              { emailRedirectTo: `${window.location.origin}/` },
+            );
+            if (emailError) {
+              console.error("could not save email", emailError);
+            } else {
+              toast({
+                title: "Confirm your email",
+                description: `We sent a confirmation link to ${trimmedEmail}.`,
+              });
+            }
+          }
+        }
       } else {
         throw new Error("No session returned. Please try again.");
       }
+
     } catch (err: any) {
       setOtpCode("");
       toast({ title: "Verification failed", description: err.message || "Invalid code", variant: "destructive" });
@@ -257,6 +302,26 @@ const Auth = () => {
                   </div>
                 )}
               </div>
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label htmlFor="signup-phone" className="text-lg">Mobile number</Label>
+                  <Input
+                    id="signup-phone"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+1 415 555 1234"
+                    required
+                    className="h-14 text-lg"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    We use this to text your after-meal check-ins — and you can reply to log a meal.
+                  </p>
+                </div>
+              )}
+
               <Button type="submit" className="w-full h-14 text-lg" disabled={loading}>
                 {loading && <Loader2 className="w-5 h-5 mr-2 animate-spin" aria-hidden="true" />}
                 {isLogin ? "Sign In" : "Create Account"}
@@ -295,6 +360,23 @@ const Auth = () => {
                     Include your country code (e.g. +1 for US, +44 for UK).
                   </p>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone-email" className="text-lg">Email address</Label>
+                  <Input
+                    id="phone-email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="h-14 text-lg"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Optional for signing in, but it lets us send your reports and help you recover your account.
+                  </p>
+                </div>
+
                 <Button type="submit" className="w-full h-14 text-lg" disabled={loading}>
                   {loading && <Loader2 className="w-5 h-5 mr-2 animate-spin" aria-hidden="true" />}
                   Send Verification Code
