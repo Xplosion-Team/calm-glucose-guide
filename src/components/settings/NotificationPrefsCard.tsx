@@ -82,6 +82,70 @@ export function NotificationPrefsCard() {
         <div className="pt-3 border-t space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex-1 pr-3">
+              <Label className="text-sm font-medium">After-meal check-in</Label>
+              <p className="text-xs text-muted-foreground">
+                Ask how I'm doing a little while after I log a meal or drink.
+              </p>
+            </div>
+            <Switch
+              checked={prefs.post_meal_enabled}
+              onCheckedChange={(v) => save({ post_meal_enabled: v })}
+            />
+          </div>
+
+          {prefs.post_meal_enabled && (
+            <>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Remind me after</Label>
+                <select
+                  className="w-full h-10 rounded-md border bg-background px-2 text-sm"
+                  value={prefs.post_meal_delay_min}
+                  onChange={(e) => save({ post_meal_delay_min: Number(e.target.value) })}
+                >
+                  {[30, 60, 90, 120, 150, 180].map((m) => (
+                    <option key={m} value={m}>
+                      {m < 60 ? `${m} minutes` : `${m / 60} hour${m > 60 ? "s" : ""}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex-1 pr-3">
+                  <Label className="text-sm font-medium">Also text me</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Send the check-in as a text message so it reaches you outside the app.
+                  </p>
+                </div>
+                <Switch
+                  checked={prefs.post_meal_sms_enabled}
+                  onCheckedChange={(v) => save({ post_meal_sms_enabled: v })}
+                />
+              </div>
+
+              {prefs.post_meal_sms_enabled && (
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Text message service</Label>
+                  <select
+                    className="w-full h-10 rounded-md border bg-background px-2 text-sm"
+                    value={prefs.sms_provider}
+                    onChange={(e) =>
+                      save({ sms_provider: e.target.value as "twilio" | "ringcentral" })
+                    }
+                  >
+                    <option value="twilio">Twilio</option>
+                    <option value="ringcentral">RingCentral</option>
+                  </select>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="pt-3 border-t space-y-3">
+
+          <div className="flex items-center justify-between">
+            <div className="flex-1 pr-3">
               <Label className="text-sm font-medium">Daily insight</Label>
               <p className="text-xs text-muted-foreground">A morning summary of yesterday's glucose, meals, and coaching.</p>
             </div>
