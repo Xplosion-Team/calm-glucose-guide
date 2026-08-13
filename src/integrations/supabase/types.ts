@@ -1211,7 +1211,7 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      find_user_by_phone: { Args: { _variants: string[] }; Returns: string }
     }
     Enums: {
       [_ in never]: never
