@@ -121,50 +121,27 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Otherwise treat the text as a new entry.
+    // 2. Otherwise treat the text as a new entry — held for confirmation.
     const type = classify(body);
-    let label = body.slice(0, 60);
-    let carbs: number | null = null;
-    let portion: string | null = null;
+    const draft = await analyzeEntry(supabase, body, type);
 
-    if (type !== "medication") {
-      const aiResp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/analyze-food`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
-        },
-        body: JSON.stringify({ text: body, lang: "en" }),
-      });
-
-      if (aiResp.ok) {
-        const j = await aiResp.json();
-        label = j.foodName || label;
-        carbs = j.carbsGrams ?? null;
-        portion = j.portionSize ?? null;
-      } else {
-        console.error(`analyze-food failed [${aiResp.status}]: ${await aiResp.text()}`);
-      }
-    }
-
-    const { error: insertError } = await supabase.from("food_logs").insert({
+    const { error: draftError } = await supabase.from("sms_pending_logs").insert({
       user_id: userId,
       type,
-      label,
-      carbs_grams: carbs,
-      portion_size: portion,
-      source: "sms",
-      notes: label === body.slice(0, 60) ? null : body,
+      label: draft.label,
+      carbs_grams: draft.carbs,
+      portion_size: draft.portion,
+      original_text: body,
+      status: "pending",
     });
 
-    if (insertError) {
-      console.error("food_logs insert failed", insertError);
+    if (draftError) {
+      console.error("sms_pending_logs insert failed", draftError);
       return reply("I couldn't save that just now. Please try again in a moment.");
     }
 
-    return reply(
-      `Logged: ${label}${carbs ? ` (~${carbs}g carbs)` : ""}. Thanks for sharing 💚`,
-    );
+    return reply(confirmPrompt(draft.label, draft.carbs, draft.portion));
+
   } catch (e) {
     console.error("sms-inbound error", e);
     return reply("Something went wrong on my end. Please try again in a moment.");
