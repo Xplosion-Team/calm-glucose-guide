@@ -1,5 +1,9 @@
-// Twilio SMS inbound webhook. Parses message text, runs analyze-food in text mode,
-// inserts a food_log on behalf of the user matched by phone, and replies with TwiML.
+// Inbound SMS webhook (Twilio TwiML + RingCentral JSON friendly).
+// Two behaviours:
+//   1. If the person has a check-in reminder waiting, the text is saved as a
+//      note on that meal and the reminder is closed out.
+//   2. Otherwise the text is treated as a new food/drink entry: analyze-food
+//      estimates the label, carbs and portion, and a food_log row is inserted.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -12,18 +16,51 @@ function twiml(message: string) {
   return `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${escaped}</Message></Response>`;
 }
 
+function reply(message: string) {
+  return new Response(twiml(message), {
+    headers: { ...corsHeaders, "Content-Type": "text/xml" },
+  });
+}
+
+// Numbers are stored inconsistently (E.164, bare 10 digits, 1-prefixed), so we
+// look the person up by every reasonable spelling of the number that texted us.
+function phoneVariants(raw: string): string[] {
+  const digits = raw.replace(/\D/g, "");
+  const ten = digits.length > 10 ? digits.slice(-10) : digits;
+  return Array.from(new Set([raw, digits, ten, `1${ten}`, `+1${ten}`, `+${digits}`]));
+}
+
+function classify(text: string): "food" | "drink" | "medication" {
+  const t = text.toLowerCase();
+  if (/\b(pill|dose|metformin|insulin|med|medication|took my)\b/.test(t)) return "medication";
+  if (/\b(coffee|tea|soda|juice|water|smoothie|milk|beer|wine|drank|drink|latte|shake)\b/.test(t)) {
+    return "drink";
+  }
+  return "food";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const form = await req.formData();
-    const from = (form.get("From") || "").toString();
-    const body = (form.get("Body") || "").toString().trim();
+    // Twilio posts form-encoded; RingCentral webhooks post JSON.
+    let from = "";
+    let body = "";
+    const contentType = req.headers.get("content-type") ?? "";
+
+    if (contentType.includes("application/json")) {
+      const json = await req.json().catch(() => ({} as Record<string, unknown>));
+      const msg = (json as any)?.body?.[0] ?? json;
+      from = String(msg?.from?.phoneNumber ?? msg?.From ?? msg?.from ?? "");
+      body = String(msg?.subject ?? msg?.text ?? msg?.Body ?? msg?.body ?? "").trim();
+    } else {
+      const form = await req.formData();
+      from = (form.get("From") || "").toString();
+      body = (form.get("Body") || "").toString().trim();
+    }
 
     if (!from || !body) {
-      return new Response(twiml("Sorry, I didn't catch that. Try again with what you ate or drank."), {
-        headers: { "Content-Type": "text/xml" },
-      });
+      return reply("Sorry, I didn't catch that. Text me what you ate or drank and I'll log it.");
     }
 
     const supabase = createClient(
@@ -31,54 +68,105 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Match user by phone in user_engagement
-    const { data: eng } = await supabase
-      .from("user_engagement")
-      .select("user_id")
-      .eq("phone", from)
-      .maybeSingle();
+    // Matches on the engagement record first, then on the sign-in phone number.
+    const { data: userId, error: lookupError } = await supabase.rpc("find_user_by_phone", {
+      _variants: phoneVariants(from),
+    });
+    if (lookupError) console.error("phone lookup failed", lookupError);
 
-    if (!eng?.user_id) {
-      return new Response(twiml("Welcome! Please sign up in the Calm Glucose app to log meals via text."), {
-        headers: { "Content-Type": "text/xml" },
-      });
+
+    if (!userId) {
+      return reply("Welcome! Please sign up in the Calm Glucose app so I can save your entries.");
     }
 
-    // Call analyze-food in text mode
-    const aiResp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/analyze-food`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
-      },
-      body: JSON.stringify({ text: body, lang: "en" }),
-    });
+    // Simple opt-out courtesy.
+    if (/^(stop|unsubscribe|cancel)$/i.test(body)) {
+      await supabase
+        .from("notification_prefs")
+        .upsert({ user_id: userId, post_meal_sms_enabled: false }, { onConflict: "user_id" });
+      return reply("Okay — I won't text you check-ins anymore. You can turn them back on in the app.");
+    }
 
+    // 1. Is this a reply to a check-in we sent recently?
+    const sinceCheckin = new Date(Date.now() - 12 * 3.6e6).toISOString();
+    const { data: reminder } = await supabase
+      .from("meal_reminders")
+      .select("id, food_log_id, meal_label")
+      .eq("user_id", userId)
+      .eq("status", "pending")
+      .not("sms_sent_at", "is", null)
+      .gte("sms_sent_at", sinceCheckin)
+      .order("sms_sent_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (reminder) {
+      const { data: log } = await supabase
+        .from("food_logs")
+        .select("notes")
+        .eq("id", reminder.food_log_id)
+        .maybeSingle();
+
+      const stamped = `Check-in reply: ${body}`;
+      const notes = log?.notes ? `${log.notes}\n${stamped}` : stamped;
+
+      await supabase.from("food_logs").update({ notes }).eq("id", reminder.food_log_id);
+      await supabase
+        .from("meal_reminders")
+        .update({ status: "responded", responded_at: new Date().toISOString() })
+        .eq("id", reminder.id);
+
+      return reply(
+        `Thank you — I added that to your ${reminder.meal_label} entry. 💚`,
+      );
+    }
+
+    // 2. Otherwise treat the text as a new entry.
+    const type = classify(body);
     let label = body.slice(0, 60);
     let carbs: number | null = null;
     let portion: string | null = null;
-    if (aiResp.ok) {
-      const j = await aiResp.json();
-      label = j.foodName || label;
-      carbs = j.carbsGrams ?? null;
-      portion = j.portionSize ?? null;
+
+    if (type !== "medication") {
+      const aiResp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/analyze-food`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+        },
+        body: JSON.stringify({ text: body, lang: "en" }),
+      });
+
+      if (aiResp.ok) {
+        const j = await aiResp.json();
+        label = j.foodName || label;
+        carbs = j.carbsGrams ?? null;
+        portion = j.portionSize ?? null;
+      } else {
+        console.error(`analyze-food failed [${aiResp.status}]: ${await aiResp.text()}`);
+      }
     }
 
-    await supabase.from("food_logs").insert({
-      user_id: eng.user_id,
-      type: "food",
+    const { error: insertError } = await supabase.from("food_logs").insert({
+      user_id: userId,
+      type,
       label,
       carbs_grams: carbs,
       portion_size: portion,
       source: "sms",
+      notes: label === body.slice(0, 60) ? null : body,
     });
 
-    const reply = `Logged: ${label}${carbs ? ` (~${carbs}g carbs)` : ""}. Thanks for sharing 💚`;
-    return new Response(twiml(reply), { headers: { "Content-Type": "text/xml" } });
+    if (insertError) {
+      console.error("food_logs insert failed", insertError);
+      return reply("I couldn't save that just now. Please try again in a moment.");
+    }
+
+    return reply(
+      `Logged: ${label}${carbs ? ` (~${carbs}g carbs)` : ""}. Thanks for sharing 💚`,
+    );
   } catch (e) {
     console.error("sms-inbound error", e);
-    return new Response(twiml("Something went wrong on my end. Please try again in a moment."), {
-      headers: { "Content-Type": "text/xml" },
-    });
+    return reply("Something went wrong on my end. Please try again in a moment.");
   }
 });
