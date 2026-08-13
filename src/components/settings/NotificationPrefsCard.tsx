@@ -96,7 +96,26 @@ export function NotificationPrefsCard() {
           {prefs.post_meal_enabled && (
             <>
               <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">When to check in</Label>
+                <select
+                  className="w-full h-10 rounded-md border bg-background px-2 text-sm"
+                  value={prefs.post_meal_trigger}
+                  onChange={(e) =>
+                    save({ post_meal_trigger: e.target.value as "auto" | "time" | "spike" })
+                  }
+                >
+                  <option value="auto">When my glucose rises (or on a timer if no readings)</option>
+                  <option value="spike">Only when my glucose rises</option>
+                  <option value="time">Always on a timer</option>
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  With CGM readings connected, we wait for a real rise after the meal instead of a fixed wait.
+                </p>
+              </div>
+
+              <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Remind me after</Label>
+
                 <select
                   className="w-full h-10 rounded-md border bg-background px-2 text-sm"
                   value={prefs.post_meal_delay_min}
