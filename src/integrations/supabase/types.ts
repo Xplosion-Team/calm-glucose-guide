@@ -421,6 +421,56 @@ export type Database = {
         }
         Relationships: []
       }
+      meal_reminders: {
+        Row: {
+          created_at: string
+          due_at: string
+          food_log_id: string
+          id: string
+          meal_label: string
+          responded_at: string | null
+          seen_at: string | null
+          sms_provider: string | null
+          sms_sent_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          due_at: string
+          food_log_id: string
+          id?: string
+          meal_label: string
+          responded_at?: string | null
+          seen_at?: string | null
+          sms_provider?: string | null
+          sms_sent_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          due_at?: string
+          food_log_id?: string
+          id?: string
+          meal_label?: string
+          responded_at?: string | null
+          seen_at?: string | null
+          sms_provider?: string | null
+          sms_sent_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_reminders_food_log_id_fkey"
+            columns: ["food_log_id"]
+            isOneToOne: false
+            referencedRelation: "food_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meal_responses: {
         Row: {
           auc: number | null
@@ -642,8 +692,12 @@ export type Database = {
         Row: {
           daily_insight_enabled: boolean
           daily_insight_hour: number
+          post_meal_delay_min: number
+          post_meal_enabled: boolean
+          post_meal_sms_enabled: boolean
           quiet_end_hour: number | null
           quiet_start_hour: number | null
+          sms_provider: string
           spike_enabled: boolean
           spike_sensitivity: string
           updated_at: string
@@ -652,8 +706,12 @@ export type Database = {
         Insert: {
           daily_insight_enabled?: boolean
           daily_insight_hour?: number
+          post_meal_delay_min?: number
+          post_meal_enabled?: boolean
+          post_meal_sms_enabled?: boolean
           quiet_end_hour?: number | null
           quiet_start_hour?: number | null
+          sms_provider?: string
           spike_enabled?: boolean
           spike_sensitivity?: string
           updated_at?: string
@@ -662,8 +720,12 @@ export type Database = {
         Update: {
           daily_insight_enabled?: boolean
           daily_insight_hour?: number
+          post_meal_delay_min?: number
+          post_meal_enabled?: boolean
+          post_meal_sms_enabled?: boolean
           quiet_end_hour?: number | null
           quiet_start_hour?: number | null
+          sms_provider?: string
           spike_enabled?: boolean
           spike_sensitivity?: string
           updated_at?: string

@@ -8,6 +8,10 @@ export interface NotificationPrefs {
   quiet_end_hour: number | null;
   daily_insight_enabled: boolean;
   daily_insight_hour: number;
+  post_meal_enabled: boolean;
+  post_meal_delay_min: number;
+  post_meal_sms_enabled: boolean;
+  sms_provider: "twilio" | "ringcentral";
 }
 
 const DEFAULTS: NotificationPrefs = {
@@ -17,7 +21,12 @@ const DEFAULTS: NotificationPrefs = {
   quiet_end_hour: null,
   daily_insight_enabled: true,
   daily_insight_hour: 8,
+  post_meal_enabled: true,
+  post_meal_delay_min: 120,
+  post_meal_sms_enabled: false,
+  sms_provider: "twilio",
 };
+
 
 export function useNotificationPrefs() {
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULTS);

@@ -29,6 +29,9 @@ import { HealthTab } from "@/components/tabs/HealthTab";
 import { useGlucoseData } from "@/hooks/useGlucoseData";
 import { useSpikeDetection } from "@/hooks/useSpikeDetection";
 import { SpikeBanner } from "@/components/spike/SpikeBanner";
+import { useMealReminders } from "@/hooks/useMealReminders";
+import { MealReminderBanner } from "@/components/reminders/MealReminderBanner";
+
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useI18n } from "@/i18n/I18nProvider";
 import { getGreeting } from "@/lib/glucose-interpreter";
@@ -119,6 +122,8 @@ const Index = () => {
 
   const { data, isLoading, refresh, isDexcom, noT1PalData } = useGlucoseData();
   const { pending: pendingSpike, respond: respondSpike } = useSpikeDetection(data?.timestamp);
+  const { dueReminder, resolve: resolveReminder, snooze: snoozeReminder } = useMealReminders();
+
   const goToTodayLog = () => { setActiveTab("journey"); setJourneySub("today"); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const {
     tourRunning,
@@ -220,6 +225,15 @@ const Index = () => {
               onDismiss={() => respondSpike("dismissed")}
             />
           )}
+          {dueReminder && (
+            <MealReminderBanner
+              reminder={dueReminder}
+              onCheckIn={() => { void resolveReminder(dueReminder.id, "done"); goToTodayLog(); }}
+              onSnooze={() => void snoozeReminder(dueReminder.id, 30)}
+              onDismiss={() => void resolveReminder(dueReminder.id, "dismissed")}
+            />
+          )}
+
           {activeTab === "journey" && (
             <>
               <SubNav<JourneySub>
