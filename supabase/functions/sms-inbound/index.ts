@@ -128,7 +128,65 @@ Deno.serve(async (req) => {
       return reply("Okay — I won't text you check-ins anymore. You can turn them back on in the app.");
     }
 
+    // 0. Waiting on a confirmation for something they just texted in?
+    const sincePending = new Date(Date.now() - 6 * 3.6e6).toISOString();
+    const { data: pending } = await supabase
+      .from("sms_pending_logs")
+      .select("id, type, label, carbs_grams, portion_size, original_text")
+      .eq("user_id", userId)
+      .eq("status", "pending")
+      .gte("created_at", sincePending)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (pending) {
+      if (/^(yes|y|yeah|yep|ok|okay|correct|confirm|save)\b/i.test(body)) {
+        const { error: insertError } = await supabase.from("food_logs").insert({
+          user_id: userId,
+          type: pending.type,
+          label: pending.label,
+          carbs_grams: pending.carbs_grams,
+          portion_size: pending.portion_size,
+          source: "sms",
+          notes: pending.label === pending.original_text.slice(0, 60) ? null : pending.original_text,
+        });
+        if (insertError) {
+          console.error("food_logs insert failed", insertError);
+          return reply("I couldn't save that just now. Please try again in a moment.");
+        }
+        await supabase
+          .from("sms_pending_logs")
+          .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
+          .eq("id", pending.id);
+        return reply(
+          `Saved: ${pending.label}${pending.carbs_grams ? ` (~${pending.carbs_grams}g carbs)` : ""}. Thanks for sharing 💚`,
+        );
+      }
+
+      if (/^(no|n|nope|discard|delete|nevermind|never mind)\b/i.test(body)) {
+        await supabase.from("sms_pending_logs").update({ status: "discarded" }).eq("id", pending.id);
+        return reply("No problem — I didn't save it. Text me again whenever you're ready.");
+      }
+
+      // Anything else is treated as an edit to the entry we're holding.
+      const type = classify(body);
+      const revised = await analyzeEntry(supabase, body, type);
+      await supabase
+        .from("sms_pending_logs")
+        .update({
+          type,
+          label: revised.label,
+          carbs_grams: revised.carbs,
+          portion_size: revised.portion,
+          original_text: body,
+        })
+        .eq("id", pending.id);
+      return reply(confirmPrompt(revised.label, revised.carbs, revised.portion));
+    }
+
     // 1. Is this a reply to a check-in we sent recently?
+
     const sinceCheckin = new Date(Date.now() - 12 * 3.6e6).toISOString();
     const { data: reminder } = await supabase
       .from("meal_reminders")
