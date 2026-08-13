@@ -159,9 +159,8 @@ Deno.serve(async (req) => {
           .from("sms_pending_logs")
           .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
           .eq("id", pending.id);
-        return reply(
-          `Saved: ${pending.label}${pending.carbs_grams ? ` (~${pending.carbs_grams}g carbs)` : ""}. Thanks for sharing 💚`,
-        );
+        return reply(await savedReply(supabase, userId as string, pending));
+
       }
 
       if (/^(no|n|nope|discard|delete|nevermind|never mind)\b/i.test(body)) {
