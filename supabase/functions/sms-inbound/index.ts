@@ -39,6 +39,47 @@ function classify(text: string): "food" | "drink" | "medication" {
   return "food";
 }
 
+// Ask the person to check the entry before anything is written to their journal.
+function confirmPrompt(label: string, carbs: number | null, portion: string | null) {
+  const details = [carbs ? `~${carbs}g carbs` : null, portion ? `${portion} portion` : null]
+    .filter(Boolean)
+    .join(", ");
+  return `Got it: ${label}${details ? ` (${details})` : ""}.\nReply YES to save, NO to discard, or just text me the correction.`;
+}
+
+async function analyzeEntry(
+  supabase: ReturnType<typeof createClient>,
+  text: string,
+  type: "food" | "drink" | "medication",
+) {
+  let label = text.slice(0, 60);
+  let carbs: number | null = null;
+  let portion: string | null = null;
+
+  if (type !== "medication") {
+    const aiResp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/analyze-food`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+      },
+      body: JSON.stringify({ text, lang: "en" }),
+    });
+
+    if (aiResp.ok) {
+      const j = await aiResp.json();
+      label = j.foodName || label;
+      carbs = j.carbsGrams ?? null;
+      portion = j.portionSize ?? null;
+    } else {
+      console.error(`analyze-food failed [${aiResp.status}]: ${await aiResp.text()}`);
+    }
+  }
+
+  return { label, carbs, portion };
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
