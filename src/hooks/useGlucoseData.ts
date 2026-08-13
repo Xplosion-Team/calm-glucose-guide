@@ -138,6 +138,25 @@ export function useGlucoseData() {
     let hasT1PalConnection = false;
     let hasCgmRows = false;
     try {
+      // Only hit authenticated endpoints when a real session exists —
+      // otherwise the edge functions correctly reject with 401.
+      const { data: sessionData } = await supabase.auth.getSession();
+      const isSignedIn = !!sessionData?.session;
+
+      if (!isSignedIn) {
+        setIsDexcom(false);
+        setNoT1PalData(false);
+        const demo = generateDemoReading();
+        const userProfile: UserProfile = { ...demoProfile };
+        setData({
+          ...demo,
+          interpretation: interpretGlucose(demo, userProfile),
+          userProfile,
+        });
+        setIsLoading(false);
+        return;
+      }
+
       // Trigger Nightscout + T1Pal syncs so "Check again" pulls the
       // freshest readings before we query cgm_readings. Best-effort:
       // failures are ignored so demo/fallback data still works.
