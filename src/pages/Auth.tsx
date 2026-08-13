@@ -171,9 +171,30 @@ const Auth = () => {
           access_token: data.session.access_token,
           refresh_token: data.session.refresh_token,
         });
+
+        // Attach the email address they gave us, if their account has none yet.
+        const trimmedEmail = email.trim();
+        if (trimmedEmail) {
+          const { data: u } = await supabase.auth.getUser();
+          if (u.user && !u.user.email) {
+            const { error: emailError } = await supabase.auth.updateUser(
+              { email: trimmedEmail },
+              { emailRedirectTo: `${window.location.origin}/` },
+            );
+            if (emailError) {
+              console.error("could not save email", emailError);
+            } else {
+              toast({
+                title: "Confirm your email",
+                description: `We sent a confirmation link to ${trimmedEmail}.`,
+              });
+            }
+          }
+        }
       } else {
         throw new Error("No session returned. Please try again.");
       }
+
     } catch (err: any) {
       setOtpCode("");
       toast({ title: "Verification failed", description: err.message || "Invalid code", variant: "destructive" });
