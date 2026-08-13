@@ -935,6 +935,48 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_pending_logs: {
+        Row: {
+          carbs_grams: number | null
+          confirmed_at: string | null
+          created_at: string
+          id: string
+          label: string
+          original_text: string
+          portion_size: string | null
+          status: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          carbs_grams?: number | null
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          label: string
+          original_text: string
+          portion_size?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          carbs_grams?: number | null
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          label?: string
+          original_text?: string
+          portion_size?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       spike_events: {
         Row: {
           associated_food_log_id: string | null
