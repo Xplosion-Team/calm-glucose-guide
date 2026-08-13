@@ -39,6 +39,47 @@ function classify(text: string): "food" | "drink" | "medication" {
   return "food";
 }
 
+// Ask the person to check the entry before anything is written to their journal.
+function confirmPrompt(label: string, carbs: number | null, portion: string | null) {
+  const details = [carbs ? `~${carbs}g carbs` : null, portion ? `${portion} portion` : null]
+    .filter(Boolean)
+    .join(", ");
+  return `Got it: ${label}${details ? ` (${details})` : ""}.\nReply YES to save, NO to discard, or just text me the correction.`;
+}
+
+async function analyzeEntry(
+  supabase: ReturnType<typeof createClient>,
+  text: string,
+  type: "food" | "drink" | "medication",
+) {
+  let label = text.slice(0, 60);
+  let carbs: number | null = null;
+  let portion: string | null = null;
+
+  if (type !== "medication") {
+    const aiResp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/analyze-food`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+      },
+      body: JSON.stringify({ text, lang: "en" }),
+    });
+
+    if (aiResp.ok) {
+      const j = await aiResp.json();
+      label = j.foodName || label;
+      carbs = j.carbsGrams ?? null;
+      portion = j.portionSize ?? null;
+    } else {
+      console.error(`analyze-food failed [${aiResp.status}]: ${await aiResp.text()}`);
+    }
+  }
+
+  return { label, carbs, portion };
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -87,7 +128,65 @@ Deno.serve(async (req) => {
       return reply("Okay — I won't text you check-ins anymore. You can turn them back on in the app.");
     }
 
+    // 0. Waiting on a confirmation for something they just texted in?
+    const sincePending = new Date(Date.now() - 6 * 3.6e6).toISOString();
+    const { data: pending } = await supabase
+      .from("sms_pending_logs")
+      .select("id, type, label, carbs_grams, portion_size, original_text")
+      .eq("user_id", userId)
+      .eq("status", "pending")
+      .gte("created_at", sincePending)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (pending) {
+      if (/^(yes|y|yeah|yep|ok|okay|correct|confirm|save)\b/i.test(body)) {
+        const { error: insertError } = await supabase.from("food_logs").insert({
+          user_id: userId,
+          type: pending.type,
+          label: pending.label,
+          carbs_grams: pending.carbs_grams,
+          portion_size: pending.portion_size,
+          source: "sms",
+          notes: pending.label === pending.original_text.slice(0, 60) ? null : pending.original_text,
+        });
+        if (insertError) {
+          console.error("food_logs insert failed", insertError);
+          return reply("I couldn't save that just now. Please try again in a moment.");
+        }
+        await supabase
+          .from("sms_pending_logs")
+          .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
+          .eq("id", pending.id);
+        return reply(
+          `Saved: ${pending.label}${pending.carbs_grams ? ` (~${pending.carbs_grams}g carbs)` : ""}. Thanks for sharing 💚`,
+        );
+      }
+
+      if (/^(no|n|nope|discard|delete|nevermind|never mind)\b/i.test(body)) {
+        await supabase.from("sms_pending_logs").update({ status: "discarded" }).eq("id", pending.id);
+        return reply("No problem — I didn't save it. Text me again whenever you're ready.");
+      }
+
+      // Anything else is treated as an edit to the entry we're holding.
+      const type = classify(body);
+      const revised = await analyzeEntry(supabase, body, type);
+      await supabase
+        .from("sms_pending_logs")
+        .update({
+          type,
+          label: revised.label,
+          carbs_grams: revised.carbs,
+          portion_size: revised.portion,
+          original_text: body,
+        })
+        .eq("id", pending.id);
+      return reply(confirmPrompt(revised.label, revised.carbs, revised.portion));
+    }
+
     // 1. Is this a reply to a check-in we sent recently?
+
     const sinceCheckin = new Date(Date.now() - 12 * 3.6e6).toISOString();
     const { data: reminder } = await supabase
       .from("meal_reminders")
@@ -121,50 +220,27 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Otherwise treat the text as a new entry.
+    // 2. Otherwise treat the text as a new entry — held for confirmation.
     const type = classify(body);
-    let label = body.slice(0, 60);
-    let carbs: number | null = null;
-    let portion: string | null = null;
+    const draft = await analyzeEntry(supabase, body, type);
 
-    if (type !== "medication") {
-      const aiResp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/analyze-food`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
-        },
-        body: JSON.stringify({ text: body, lang: "en" }),
-      });
-
-      if (aiResp.ok) {
-        const j = await aiResp.json();
-        label = j.foodName || label;
-        carbs = j.carbsGrams ?? null;
-        portion = j.portionSize ?? null;
-      } else {
-        console.error(`analyze-food failed [${aiResp.status}]: ${await aiResp.text()}`);
-      }
-    }
-
-    const { error: insertError } = await supabase.from("food_logs").insert({
+    const { error: draftError } = await supabase.from("sms_pending_logs").insert({
       user_id: userId,
       type,
-      label,
-      carbs_grams: carbs,
-      portion_size: portion,
-      source: "sms",
-      notes: label === body.slice(0, 60) ? null : body,
+      label: draft.label,
+      carbs_grams: draft.carbs,
+      portion_size: draft.portion,
+      original_text: body,
+      status: "pending",
     });
 
-    if (insertError) {
-      console.error("food_logs insert failed", insertError);
+    if (draftError) {
+      console.error("sms_pending_logs insert failed", draftError);
       return reply("I couldn't save that just now. Please try again in a moment.");
     }
 
-    return reply(
-      `Logged: ${label}${carbs ? ` (~${carbs}g carbs)` : ""}. Thanks for sharing 💚`,
-    );
+    return reply(confirmPrompt(draft.label, draft.carbs, draft.portion));
+
   } catch (e) {
     console.error("sms-inbound error", e);
     return reply("Something went wrong on my end. Please try again in a moment.");
