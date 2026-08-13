@@ -29,6 +29,9 @@ import { HealthTab } from "@/components/tabs/HealthTab";
 import { useGlucoseData } from "@/hooks/useGlucoseData";
 import { useSpikeDetection } from "@/hooks/useSpikeDetection";
 import { SpikeBanner } from "@/components/spike/SpikeBanner";
+import { useMealReminders } from "@/hooks/useMealReminders";
+import { MealReminderBanner } from "@/components/reminders/MealReminderBanner";
+
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useI18n } from "@/i18n/I18nProvider";
 import { getGreeting } from "@/lib/glucose-interpreter";
