@@ -122,6 +122,8 @@ const Index = () => {
 
   const { data, isLoading, refresh, isDexcom, noT1PalData } = useGlucoseData();
   const { pending: pendingSpike, respond: respondSpike } = useSpikeDetection(data?.timestamp);
+  const { dueReminder, resolve: resolveReminder, snooze: snoozeReminder } = useMealReminders();
+
   const goToTodayLog = () => { setActiveTab("journey"); setJourneySub("today"); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const {
     tourRunning,
