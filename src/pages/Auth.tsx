@@ -360,6 +360,23 @@ const Auth = () => {
                     Include your country code (e.g. +1 for US, +44 for UK).
                   </p>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone-email" className="text-lg">Email address</Label>
+                  <Input
+                    id="phone-email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="h-14 text-lg"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Optional for signing in, but it lets us send your reports and help you recover your account.
+                  </p>
+                </div>
+
                 <Button type="submit" className="w-full h-14 text-lg" disabled={loading}>
                   {loading && <Loader2 className="w-5 h-5 mr-2 animate-spin" aria-hidden="true" />}
                   Send Verification Code
