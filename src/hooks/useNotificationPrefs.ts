@@ -11,6 +11,7 @@ export interface NotificationPrefs {
   post_meal_enabled: boolean;
   post_meal_delay_min: number;
   post_meal_sms_enabled: boolean;
+  post_meal_trigger: "auto" | "time" | "spike";
   sms_provider: "twilio" | "ringcentral";
 }
 
@@ -24,6 +25,7 @@ const DEFAULTS: NotificationPrefs = {
   post_meal_enabled: true,
   post_meal_delay_min: 120,
   post_meal_sms_enabled: false,
+  post_meal_trigger: "auto",
   sms_provider: "twilio",
 };
 
