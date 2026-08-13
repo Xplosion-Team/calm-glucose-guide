@@ -59,6 +59,25 @@ const Auth = () => {
       toast({ title: "Password too short", description: "Use at least 6 characters.", variant: "destructive" });
       return;
     }
+    const normalizedPhone = phone.trim() ? normalizePhone(phone) : "";
+    if (!isLogin) {
+      if (!normalizedPhone) {
+        toast({
+          title: "Phone number required",
+          description: "We use it to text your check-ins and let you log by text.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!E164_REGEX.test(normalizedPhone)) {
+        toast({
+          title: "Invalid phone number",
+          description: "Use international format with country code, e.g. +14155551234.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     setLoading(true);
     try {
       if (isLogin) {
@@ -74,7 +93,11 @@ const Auth = () => {
         const { error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
-          options: { emailRedirectTo: `${window.location.origin}/` },
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            // Saved on the account so check-in texts and text-logging work.
+            data: { phone: normalizedPhone },
+          },
         });
         if (error) throw error;
         toast({
@@ -88,6 +111,7 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
 
   const sendCode = async () => {
     const normalized = normalizePhone(phone);
