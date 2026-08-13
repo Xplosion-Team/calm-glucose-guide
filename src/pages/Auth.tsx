@@ -302,6 +302,26 @@ const Auth = () => {
                   </div>
                 )}
               </div>
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label htmlFor="signup-phone" className="text-lg">Mobile number</Label>
+                  <Input
+                    id="signup-phone"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+1 415 555 1234"
+                    required
+                    className="h-14 text-lg"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    We use this to text your after-meal check-ins — and you can reply to log a meal.
+                  </p>
+                </div>
+              )}
+
               <Button type="submit" className="w-full h-14 text-lg" disabled={loading}>
                 {loading && <Loader2 className="w-5 h-5 mr-2 animate-spin" aria-hidden="true" />}
                 {isLogin ? "Sign In" : "Create Account"}
