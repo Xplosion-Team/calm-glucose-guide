@@ -433,6 +433,7 @@ export type Database = {
           sms_provider: string | null
           sms_sent_at: string | null
           status: string
+          trigger_reason: string | null
           user_id: string
         }
         Insert: {
@@ -446,6 +447,7 @@ export type Database = {
           sms_provider?: string | null
           sms_sent_at?: string | null
           status?: string
+          trigger_reason?: string | null
           user_id: string
         }
         Update: {
@@ -459,6 +461,7 @@ export type Database = {
           sms_provider?: string | null
           sms_sent_at?: string | null
           status?: string
+          trigger_reason?: string | null
           user_id?: string
         }
         Relationships: [
@@ -695,6 +698,7 @@ export type Database = {
           post_meal_delay_min: number
           post_meal_enabled: boolean
           post_meal_sms_enabled: boolean
+          post_meal_trigger: string
           quiet_end_hour: number | null
           quiet_start_hour: number | null
           sms_provider: string
@@ -709,6 +713,7 @@ export type Database = {
           post_meal_delay_min?: number
           post_meal_enabled?: boolean
           post_meal_sms_enabled?: boolean
+          post_meal_trigger?: string
           quiet_end_hour?: number | null
           quiet_start_hour?: number | null
           sms_provider?: string
@@ -723,6 +728,7 @@ export type Database = {
           post_meal_delay_min?: number
           post_meal_enabled?: boolean
           post_meal_sms_enabled?: boolean
+          post_meal_trigger?: string
           quiet_end_hour?: number | null
           quiet_start_hour?: number | null
           sms_provider?: string
