@@ -225,6 +225,15 @@ const Index = () => {
               onDismiss={() => respondSpike("dismissed")}
             />
           )}
+          {dueReminder && (
+            <MealReminderBanner
+              reminder={dueReminder}
+              onCheckIn={() => { void resolveReminder(dueReminder.id, "done"); goToTodayLog(); }}
+              onSnooze={() => void snoozeReminder(dueReminder.id, 30)}
+              onDismiss={() => void resolveReminder(dueReminder.id, "dismissed")}
+            />
+          )}
+
           {activeTab === "journey" && (
             <>
               <SubNav<JourneySub>
