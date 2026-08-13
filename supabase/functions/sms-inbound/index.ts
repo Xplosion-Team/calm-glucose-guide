@@ -68,13 +68,13 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { data: matches } = await supabase
-      .from("user_engagement")
-      .select("user_id, phone")
-      .in("phone", phoneVariants(from))
-      .limit(1);
+    // Matches on the engagement record first, then on the sign-in phone number.
+    const { data: userId, error: lookupError } = await supabase.rpc("find_user_by_phone", {
+      _variants: phoneVariants(from),
+    });
+    if (lookupError) console.error("phone lookup failed", lookupError);
 
-    const userId = matches?.[0]?.user_id;
+
     if (!userId) {
       return reply("Welcome! Please sign up in the Calm Glucose app so I can save your entries.");
     }
