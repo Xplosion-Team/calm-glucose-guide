@@ -12,6 +12,7 @@ import { RecentMeals } from "@/components/today/RecentMeals";
 import { FavoriteMeals } from "@/components/today/FavoriteMeals";
 import { JournalView } from "@/components/journal/JournalView";
 import { SmsTimeline } from "@/components/journal/SmsTimeline";
+import { SmsActivityLog } from "@/components/journal/SmsActivityLog";
 import { EditLogSheet, type EditableLog } from "@/components/journal/EditLogSheet";
 import { DeleteLogDialog } from "@/components/journal/DeleteLogDialog";
 import { FoodInsightsSheet } from "@/components/insights/FoodInsightsSheet";
@@ -70,6 +71,7 @@ export function TodayTab() {
   const [customText, setCustomText] = useState("");
   const [showJournal, setShowJournal] = useState(false);
   const [showTexts, setShowTexts] = useState(false);
+  const [textsView, setTextsView] = useState<"meals" | "log">("meals");
   const [showInsights, setShowInsights] = useState(false);
   const [editing, setEditing] = useState<EditableLog | null>(null);
   const [draftSource, setDraftSource] = useState<Source>("manual");
@@ -132,7 +134,23 @@ export function TodayTab() {
         <Button variant="ghost" size="sm" onClick={() => setShowTexts(false)} className="gap-1">
           <ArrowLeft className="w-4 h-4" /> {t("today.backToToday")}
         </Button>
-        <SmsTimeline />
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            variant={textsView === "meals" ? "default" : "outline"}
+            className="h-12 text-base"
+            onClick={() => setTextsView("meals")}
+          >
+            {lang === "es" ? "Comidas por mensaje" : "Meals from texts"}
+          </Button>
+          <Button
+            variant={textsView === "log" ? "default" : "outline"}
+            className="h-12 text-base"
+            onClick={() => setTextsView("log")}
+          >
+            {lang === "es" ? "Registro de mensajes" : "Message log"}
+          </Button>
+        </div>
+        {textsView === "meals" ? <SmsTimeline /> : <SmsActivityLog />}
       </div>
     );
   }
