@@ -2,7 +2,18 @@
 // Callers pass a provider name; if that provider isn't configured we fall back
 // to whichever one is, so a missing credential never silently drops a message.
 
+import { logSmsEvent } from "./smsAudit.ts";
+
 export type SmsProvider = "twilio" | "ringcentral";
+
+/** Who/what a message is for, so the audit log reads plainly. */
+export interface SmsContext {
+  userId?: string | null;
+  purpose?: string;
+  relatedTable?: string | null;
+  relatedId?: string | null;
+  metadata?: Record<string, unknown>;
+}
 
 export interface SmsResult {
   ok: boolean;
@@ -128,17 +139,39 @@ export async function sendSms(
   to: string,
   body: string,
   preferred: SmsProvider = "twilio",
+  context: SmsContext = {},
 ): Promise<SmsResult> {
   const order: SmsProvider[] = preferred === "ringcentral"
     ? ["ringcentral", "twilio"]
     : ["twilio", "ringcentral"];
 
+  let result: SmsResult = { ok: false, provider: null, error: "No SMS provider is configured" };
+
   for (const provider of order) {
-    if (provider === "twilio" && twilioConfigured()) return await sendViaTwilio(to, body);
+    if (provider === "twilio" && twilioConfigured()) {
+      result = await sendViaTwilio(to, body);
+      break;
+    }
     if (provider === "ringcentral" && ringCentralConfigured()) {
-      return await sendViaRingCentral(to, body);
+      result = await sendViaRingCentral(to, body);
+      break;
     }
   }
 
-  return { ok: false, provider: null, error: "No SMS provider is configured" };
+  // Every attempt is recorded, delivered or not.
+  await logSmsEvent({
+    userId: context.userId ?? null,
+    direction: "outbound",
+    phone: to,
+    body,
+    provider: result.provider,
+    status: result.ok ? "sent" : "failed",
+    errorMessage: result.error ?? null,
+    purpose: context.purpose ?? null,
+    relatedTable: context.relatedTable ?? null,
+    relatedId: context.relatedId ?? null,
+    metadata: { preferred_provider: preferred, ...(context.metadata ?? {}) },
+  });
+
+  return result;
 }

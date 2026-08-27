@@ -6,6 +6,7 @@
 // Plus a 10am-local nudge if nothing logged today.
 // Always positive language, no clinical content.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendSms } from "../_shared/sms.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,9 +54,6 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID")!;
-    const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN")!;
-    const TWILIO_PHONE_NUMBER = Deno.env.get("TWILIO_PHONE_NUMBER")!;
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -103,25 +101,22 @@ Deno.serve(async (req) => {
       if (!shouldSend) continue;
 
       const body = pickMessage(now.getUTCDate() + (r.user_id?.charCodeAt(0) ?? 0));
-      const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
-      const resp = await fetch(twilioUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: `Basic ${btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`)}`,
-        },
-        body: new URLSearchParams({ To: r.phone, From: TWILIO_PHONE_NUMBER, Body: body }),
+      const result = await sendSms(r.phone, body, "twilio", {
+        userId: r.user_id as string,
+        purpose: "engagement check-in",
+        metadata: { trial_tier: r.trial_tier, hours_since_log: Math.round(hoursSinceLog) },
       });
 
-      if (resp.ok) {
+      if (result.ok) {
         await supabase
           .from("user_engagement")
           .update({ last_checkin_sent_at: now.toISOString() })
           .eq("user_id", r.user_id);
         sent.push(r.phone);
       } else {
-        console.error("twilio fail", r.phone, await resp.text());
+        console.error("check-in sms failed", r.phone, result.error);
       }
+
     }
 
     return new Response(JSON.stringify({ ok: true, sent_count: sent.length }), {

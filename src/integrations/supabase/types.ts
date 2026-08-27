@@ -935,6 +935,60 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_events: {
+        Row: {
+          body: string
+          created_at: string
+          direction: string
+          error_message: string | null
+          id: string
+          metadata: Json
+          occurred_at: string
+          outcome: string | null
+          phone: string
+          provider: string | null
+          purpose: string | null
+          related_id: string | null
+          related_table: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          direction: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          outcome?: string | null
+          phone: string
+          provider?: string | null
+          purpose?: string | null
+          related_id?: string | null
+          related_table?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          direction?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          outcome?: string | null
+          phone?: string
+          provider?: string | null
+          purpose?: string | null
+          related_id?: string | null
+          related_table?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       sms_pending_logs: {
         Row: {
           carbs_grams: number | null

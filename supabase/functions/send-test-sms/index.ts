@@ -59,7 +59,10 @@ Deno.serve(async (req) => {
     const text = body.message ??
       "Hello from Calm Glucose 🌿 This is a test message — your reminders are working.";
 
-    const result = await sendSms(toE164(target), text, provider);
+    const result = await sendSms(toE164(target), text, provider, {
+      userId: user.id,
+      purpose: "test message",
+    });
 
     return new Response(JSON.stringify(result), {
       status: result.ok ? 200 : 502,

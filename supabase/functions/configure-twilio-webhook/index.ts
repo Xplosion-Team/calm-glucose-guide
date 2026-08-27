@@ -64,8 +64,36 @@ Deno.serve(async (req) => {
     }
     const updated = await updateResp.json();
 
+    // A number attached to a Messaging Service ignores its own SmsUrl — the
+    // service's inbound webhook wins, so point that at us too.
+    let messagingService: Record<string, unknown> | null = null;
+    const serviceSid = updated.messaging_service_sid ?? number.messaging_service_sid;
+    if (serviceSid) {
+      const svcResp = await fetch(
+        `https://messaging.twilio.com/v1/Services/${serviceSid}`,
+        {
+          method: "POST",
+          headers: { Authorization: auth, "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ InboundRequestUrl: webhook, InboundMethod: "POST" }),
+        },
+      );
+      const svcBody = await svcResp.text();
+      if (!svcResp.ok) {
+        console.error(`Messaging Service webhook update failed [${svcResp.status}]: ${svcBody}`);
+        messagingService = { sid: serviceSid, error: svcBody, status: svcResp.status };
+      } else {
+        const svc = JSON.parse(svcBody);
+        messagingService = { sid: svc.sid, inbound_request_url: svc.inbound_request_url };
+      }
+    }
+
     return new Response(
-      JSON.stringify({ ok: true, phone_number: updated.phone_number, sms_url: updated.sms_url }),
+      JSON.stringify({
+        ok: true,
+        phone_number: updated.phone_number,
+        sms_url: updated.sms_url,
+        messaging_service: messagingService,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {

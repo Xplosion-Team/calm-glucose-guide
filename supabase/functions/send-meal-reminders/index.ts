@@ -191,6 +191,13 @@ Deno.serve(async (req) => {
         engagement!.phone as string,
         body,
         (prefs?.sms_provider as SmsProvider) ?? "twilio",
+        {
+          userId: r.user_id as string,
+          purpose: "post-meal check-in",
+          relatedTable: "meal_reminders",
+          relatedId: r.id as string,
+          metadata: { meal_label: r.meal_label, trigger: patch.trigger_reason ?? null },
+        },
       );
 
       if (result.ok) {
