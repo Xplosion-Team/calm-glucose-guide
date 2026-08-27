@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useI18n } from "@/i18n/I18nProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -24,18 +24,23 @@ const Auth = () => {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Where to land after signing in — used by the OAuth consent flow so the
+  // connecting client gets the user back on the consent screen, not the home tab.
+  const rawNext = searchParams.get("next");
+  const nextPath = rawNext && /^\/(?!\/)/.test(rawNext) ? rawNext : "/";
   const { toast } = useToast();
   const { t } = useI18n();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) navigate("/");
+      if (session) navigate(nextPath);
     });
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate("/");
+      if (session) navigate(nextPath);
     });
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, nextPath]);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -94,7 +99,7 @@ const Auth = () => {
           email: email.trim(),
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/`,
+            emailRedirectTo: `${window.location.origin}${nextPath}`,
             // Saved on the account so check-in texts and text-logging work.
             data: { phone: normalizedPhone },
           },
@@ -179,7 +184,7 @@ const Auth = () => {
           if (u.user && !u.user.email) {
             const { error: emailError } = await supabase.auth.updateUser(
               { email: trimmedEmail },
-              { emailRedirectTo: `${window.location.origin}/` },
+              { emailRedirectTo: `${window.location.origin}${nextPath}` },
             );
             if (emailError) {
               console.error("could not save email", emailError);
