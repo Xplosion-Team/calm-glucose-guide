@@ -70,9 +70,7 @@ async function savedReply(
   userId: string,
   entry: { type: string; label: string; carbs_grams: number | null; portion_size: string | null },
 ) {
-  if (entry.type === "medication") {
-    return `Saved: ${entry.label}. Thanks for keeping up with it 💚`;
-  }
+  if (entry.type === "medication") return savedReplyText(entry, 0);
 
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
@@ -83,23 +81,7 @@ async function savedReply(
     .eq("user_id", userId)
     .gte("logged_at", startOfDay.toISOString());
 
-  const dayCarbs = (todays ?? []).reduce(
-    (sum: number, r: { carbs_grams: number | null }) => sum + (r.carbs_grams ?? 0),
-    0,
-  );
-
-  const details = [
-    entry.carbs_grams ? `~${entry.carbs_grams}g carbs` : null,
-    entry.portion_size ? `${entry.portion_size} portion` : null,
-  ]
-    .filter(Boolean)
-    .join(", ");
-
-  const lines = [`Saved: ${entry.label}${details ? ` (${details})` : ""}.`];
-  if (dayCarbs > 0) lines.push(`That's about ${dayCarbs}g of carbs logged today.`);
-  lines.push("Thanks for sharing 💚 I'll check in with you a little later.");
-
-  return lines.join("\n");
+  return savedReplyText(entry, sumCarbs(todays as Array<{ carbs_grams: number | null }> | null));
 }
 
 
