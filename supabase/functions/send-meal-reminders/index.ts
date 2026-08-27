@@ -19,6 +19,21 @@ const RISE_THRESHOLD: Record<string, number> = { low: 60, medium: 45, high: 30 }
 // Never fire a spike-based check-in sooner than this after the meal.
 const MIN_MINUTES_AFTER_MEAL = 30;
 
+// Quiet hours are stored as local hours, so compare against the person's tz.
+function localHour(tz: string | null, now: Date): number {
+  try {
+    return Number(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: tz || "America/Chicago",
+        hour: "numeric",
+        hour12: false,
+      }).format(now),
+    );
+  } catch {
+    return now.getUTCHours();
+  }
+}
+
 function quietNow(startHour: number | null, endHour: number | null, hour: number) {
   if (startHour === null || endHour === null) return false;
   if (startHour === endHour) return false;
@@ -26,6 +41,7 @@ function quietNow(startHour: number | null, endHour: number | null, hour: number
     ? hour >= startHour && hour < endHour
     : hour >= startHour || hour < endHour;
 }
+
 
 interface SpikeCheck {
   hasCgm: boolean;
@@ -113,7 +129,7 @@ Deno.serve(async (req) => {
           .maybeSingle(),
         supabase
           .from("user_engagement")
-          .select("phone")
+          .select("phone, timezone")
           .eq("user_id", r.user_id)
           .maybeSingle(),
       ]);
@@ -152,10 +168,11 @@ Deno.serve(async (req) => {
 
       // SMS is opt-in; the in-app card still shows for everyone else.
       const canText = Boolean(prefs?.post_meal_sms_enabled && engagement?.phone);
+      // Default to no texts between 9pm and 8am local when unset.
       const quiet = quietNow(
-        prefs?.quiet_start_hour ?? null,
-        prefs?.quiet_end_hour ?? null,
-        now.getUTCHours(),
+        prefs?.quiet_start_hour ?? 21,
+        prefs?.quiet_end_hour ?? 8,
+        localHour((engagement as any)?.timezone ?? null, now),
       );
 
       if (!canText || quiet) {

@@ -23,6 +23,32 @@ function pickMessage(seed: number) {
   return MESSAGES[seed % MESSAGES.length];
 }
 
+// Local hour for a user's timezone (falls back to US Central).
+function localHour(tz: string | null, now: Date): number {
+  try {
+    return Number(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: tz || "America/Chicago",
+        hour: "numeric",
+        hour12: false,
+      }).format(now),
+    );
+  } catch {
+    return Number(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/Chicago",
+        hour: "numeric",
+        hour12: false,
+      }).format(now),
+    );
+  }
+}
+
+// Check-ins only ever go out inside this local-time window.
+const SEND_WINDOW_START = 9;
+const SEND_WINDOW_END = 12;
+
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -38,7 +64,9 @@ Deno.serve(async (req) => {
     const now = new Date();
     const { data: rows, error } = await supabase
       .from("user_engagement")
-      .select("user_id, phone, trial_tier, last_log_at, last_checkin_sent_at, total_meals_logged, trial_start")
+      .select(
+        "user_id, phone, timezone, trial_tier, last_log_at, last_checkin_sent_at, total_meals_logged, trial_start",
+      )
       .not("phone", "is", null);
 
     if (error) throw error;
@@ -46,6 +74,10 @@ Deno.serve(async (req) => {
     const sent: string[] = [];
     for (const r of rows ?? []) {
       if (!r.phone) continue;
+
+      // Never text outside the person's local morning window.
+      const hour = localHour((r as any).timezone ?? null, now);
+      if (hour < SEND_WINDOW_START || hour >= SEND_WINDOW_END) continue;
 
       // Don't spam: at most one check-in per 20h
       if (r.last_checkin_sent_at) {
@@ -64,9 +96,9 @@ Deno.serve(async (req) => {
         shouldSend = true;
       }
 
-      // Also nudge ~10am local (rough: 10-11 UTC default; refined per-user later)
-      const utcHour = now.getUTCHours();
-      if (!shouldSend && utcHour >= 14 && utcHour < 15 && hoursSinceLog >= 12) shouldSend = true;
+      // 10am-local nudge when nothing has been logged today.
+      if (!shouldSend && hour === 10 && hoursSinceLog >= 12) shouldSend = true;
+
 
       if (!shouldSend) continue;
 
