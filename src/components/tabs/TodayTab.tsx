@@ -312,9 +312,15 @@ export function TodayTab() {
         <div className="text-center py-6">
           <p className="text-muted-foreground text-lg">{t("today.startLogging")}</p>
           <p className="text-sm text-muted-foreground mt-1">{t("today.trackingHelps")}</p>
-          <Button variant="ghost" size="sm" onClick={() => setShowJournal(true)} className="mt-3 gap-1 text-primary">
-            <BookOpen className="w-4 h-4" /> {t("today.viewJournal")}
-          </Button>
+          <div className="flex items-center justify-center gap-1 mt-3">
+            <Button variant="ghost" size="sm" onClick={() => setShowTexts(true)} className="gap-1 text-primary">
+              <MessageSquare className="w-4 h-4" /> {lang === "es" ? "Mensajes" : "Texts"}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setShowJournal(true)} className="gap-1 text-primary">
+              <BookOpen className="w-4 h-4" /> {t("today.viewJournal")}
+            </Button>
+          </div>
+
         </div>
       )}
 
