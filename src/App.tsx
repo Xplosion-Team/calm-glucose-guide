@@ -19,6 +19,7 @@ import { T1PAL_ENABLED, T1PAL_SETTINGS_PATH } from "./integrations/t1pal/feature
 import T1PalSettingsPage from "./components/settings/t1pal/T1PalSettingsPage";
 import MedicationsPage from "./components/medications/MedicationsPage";
 import SharedProgressPage from "./pages/SharedProgress";
+import OAuthConsent from "./pages/OAuthConsent";
 
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
             )}
             <Route path="/medications" element={<MedicationsPage />} />
             <Route path="/shared/:token" element={<SharedProgressPage />} />
+            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
