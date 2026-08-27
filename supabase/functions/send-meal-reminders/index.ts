@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
           .maybeSingle(),
         supabase
           .from("user_engagement")
-          .select("phone")
+          .select("phone, timezone")
           .eq("user_id", r.user_id)
           .maybeSingle(),
       ]);
@@ -168,10 +168,11 @@ Deno.serve(async (req) => {
 
       // SMS is opt-in; the in-app card still shows for everyone else.
       const canText = Boolean(prefs?.post_meal_sms_enabled && engagement?.phone);
+      // Default to no texts between 9pm and 8am local when unset.
       const quiet = quietNow(
-        prefs?.quiet_start_hour ?? null,
-        prefs?.quiet_end_hour ?? null,
-        now.getUTCHours(),
+        prefs?.quiet_start_hour ?? 21,
+        prefs?.quiet_end_hour ?? 8,
+        localHour((engagement as any)?.timezone ?? null, now),
       );
 
       if (!canText || quiet) {
