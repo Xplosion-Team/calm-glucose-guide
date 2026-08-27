@@ -19,6 +19,21 @@ const RISE_THRESHOLD: Record<string, number> = { low: 60, medium: 45, high: 30 }
 // Never fire a spike-based check-in sooner than this after the meal.
 const MIN_MINUTES_AFTER_MEAL = 30;
 
+// Quiet hours are stored as local hours, so compare against the person's tz.
+function localHour(tz: string | null, now: Date): number {
+  try {
+    return Number(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: tz || "America/Chicago",
+        hour: "numeric",
+        hour12: false,
+      }).format(now),
+    );
+  } catch {
+    return now.getUTCHours();
+  }
+}
+
 function quietNow(startHour: number | null, endHour: number | null, hour: number) {
   if (startHour === null || endHour === null) return false;
   if (startHour === endHour) return false;
@@ -26,6 +41,7 @@ function quietNow(startHour: number | null, endHour: number | null, hour: number
     ? hour >= startHour && hour < endHour
     : hour >= startHour || hour < endHour;
 }
+
 
 interface SpikeCheck {
   hasCgm: boolean;
