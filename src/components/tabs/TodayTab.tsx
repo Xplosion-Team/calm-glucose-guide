@@ -11,6 +11,7 @@ import { SmartLogCard } from "@/components/today/SmartLogCard";
 import { RecentMeals } from "@/components/today/RecentMeals";
 import { FavoriteMeals } from "@/components/today/FavoriteMeals";
 import { JournalView } from "@/components/journal/JournalView";
+import { SmsTimeline } from "@/components/journal/SmsTimeline";
 import { EditLogSheet, type EditableLog } from "@/components/journal/EditLogSheet";
 import { DeleteLogDialog } from "@/components/journal/DeleteLogDialog";
 import { FoodInsightsSheet } from "@/components/insights/FoodInsightsSheet";
@@ -68,6 +69,7 @@ export function TodayTab() {
   const [activeType, setActiveType] = useState<EntryType | null>(null);
   const [customText, setCustomText] = useState("");
   const [showJournal, setShowJournal] = useState(false);
+  const [showTexts, setShowTexts] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
   const [editing, setEditing] = useState<EditableLog | null>(null);
   const [draftSource, setDraftSource] = useState<Source>("manual");
@@ -123,6 +125,17 @@ export function TodayTab() {
       [todayLogs.length],
     ),
   );
+
+  if (showTexts) {
+    return (
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" onClick={() => setShowTexts(false)} className="gap-1">
+          <ArrowLeft className="w-4 h-4" /> {t("today.backToToday")}
+        </Button>
+        <SmsTimeline />
+      </div>
+    );
+  }
 
   if (showJournal) {
     return (
@@ -242,9 +255,14 @@ export function TodayTab() {
         <div className="space-y-2">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-base font-semibold text-foreground">{t("today.log")}</h3>
-            <Button variant="ghost" size="sm" onClick={() => setShowJournal(true)} className="gap-1 text-primary">
-              <BookOpen className="w-4 h-4" /> {t("today.viewJournal")}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" onClick={() => setShowTexts(true)} className="gap-1 text-primary">
+                <MessageSquare className="w-4 h-4" /> {lang === "es" ? "Mensajes" : "Texts"}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowJournal(true)} className="gap-1 text-primary">
+                <BookOpen className="w-4 h-4" /> {t("today.viewJournal")}
+              </Button>
+            </div>
           </div>
           {todayLogs.map((entry) => {
             const Icon = iconFor(entry.type);
