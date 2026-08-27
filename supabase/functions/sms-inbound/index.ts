@@ -6,6 +6,14 @@
 //      estimates the label, carbs and portion, and a food_log row is inserted.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logSmsEvent, updateSmsEvent } from "../_shared/smsAudit.ts";
+import {
+  classify,
+  confirmPrompt,
+  interpretReply,
+  phoneVariants,
+  savedReplyText,
+  sumCarbs,
+} from "./logic.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,30 +31,6 @@ function reply(message: string) {
   });
 }
 
-// Numbers are stored inconsistently (E.164, bare 10 digits, 1-prefixed), so we
-// look the person up by every reasonable spelling of the number that texted us.
-function phoneVariants(raw: string): string[] {
-  const digits = raw.replace(/\D/g, "");
-  const ten = digits.length > 10 ? digits.slice(-10) : digits;
-  return Array.from(new Set([raw, digits, ten, `1${ten}`, `+1${ten}`, `+${digits}`]));
-}
-
-function classify(text: string): "food" | "drink" | "medication" {
-  const t = text.toLowerCase();
-  if (/\b(pill|dose|metformin|insulin|med|medication|took my)\b/.test(t)) return "medication";
-  if (/\b(coffee|tea|soda|juice|water|smoothie|milk|beer|wine|drank|drink|latte|shake)\b/.test(t)) {
-    return "drink";
-  }
-  return "food";
-}
-
-// Ask the person to check the entry before anything is written to their journal.
-function confirmPrompt(label: string, carbs: number | null, portion: string | null) {
-  const details = [carbs ? `~${carbs}g carbs` : null, portion ? `${portion} portion` : null]
-    .filter(Boolean)
-    .join(", ");
-  return `Got it: ${label}${details ? ` (${details})` : ""}.\nReply YES to save, NO to discard, or just text me the correction.`;
-}
 
 async function analyzeEntry(
   supabase: ReturnType<typeof createClient>,
