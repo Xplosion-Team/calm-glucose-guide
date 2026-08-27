@@ -270,6 +270,8 @@ const Index = () => {
               {exploreSub === "health" && <HealthTab />}
             </>
           )}
+
+          {activeTab === "admin" && isAdmin && <AdminTab />}
         </div>
 
         <footer className="mt-12 text-center text-sm text-muted-foreground animate-fade-in-delay-3">
