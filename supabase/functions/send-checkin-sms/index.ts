@@ -23,6 +23,32 @@ function pickMessage(seed: number) {
   return MESSAGES[seed % MESSAGES.length];
 }
 
+// Local hour for a user's timezone (falls back to US Central).
+function localHour(tz: string | null, now: Date): number {
+  try {
+    return Number(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: tz || "America/Chicago",
+        hour: "numeric",
+        hour12: false,
+      }).format(now),
+    );
+  } catch {
+    return Number(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/Chicago",
+        hour: "numeric",
+        hour12: false,
+      }).format(now),
+    );
+  }
+}
+
+// Check-ins only ever go out inside this local-time window.
+const SEND_WINDOW_START = 9;
+const SEND_WINDOW_END = 12;
+
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
