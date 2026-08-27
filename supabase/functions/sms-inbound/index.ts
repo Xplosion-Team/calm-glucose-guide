@@ -6,6 +6,14 @@
 //      estimates the label, carbs and portion, and a food_log row is inserted.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logSmsEvent, updateSmsEvent } from "../_shared/smsAudit.ts";
+import {
+  classify,
+  confirmPrompt,
+  interpretReply,
+  phoneVariants,
+  savedReplyText,
+  sumCarbs,
+} from "./logic.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,30 +31,6 @@ function reply(message: string) {
   });
 }
 
-// Numbers are stored inconsistently (E.164, bare 10 digits, 1-prefixed), so we
-// look the person up by every reasonable spelling of the number that texted us.
-function phoneVariants(raw: string): string[] {
-  const digits = raw.replace(/\D/g, "");
-  const ten = digits.length > 10 ? digits.slice(-10) : digits;
-  return Array.from(new Set([raw, digits, ten, `1${ten}`, `+1${ten}`, `+${digits}`]));
-}
-
-function classify(text: string): "food" | "drink" | "medication" {
-  const t = text.toLowerCase();
-  if (/\b(pill|dose|metformin|insulin|med|medication|took my)\b/.test(t)) return "medication";
-  if (/\b(coffee|tea|soda|juice|water|smoothie|milk|beer|wine|drank|drink|latte|shake)\b/.test(t)) {
-    return "drink";
-  }
-  return "food";
-}
-
-// Ask the person to check the entry before anything is written to their journal.
-function confirmPrompt(label: string, carbs: number | null, portion: string | null) {
-  const details = [carbs ? `~${carbs}g carbs` : null, portion ? `${portion} portion` : null]
-    .filter(Boolean)
-    .join(", ");
-  return `Got it: ${label}${details ? ` (${details})` : ""}.\nReply YES to save, NO to discard, or just text me the correction.`;
-}
 
 async function analyzeEntry(
   supabase: ReturnType<typeof createClient>,
@@ -86,9 +70,7 @@ async function savedReply(
   userId: string,
   entry: { type: string; label: string; carbs_grams: number | null; portion_size: string | null },
 ) {
-  if (entry.type === "medication") {
-    return `Saved: ${entry.label}. Thanks for keeping up with it 💚`;
-  }
+  if (entry.type === "medication") return savedReplyText(entry, 0);
 
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
@@ -99,23 +81,7 @@ async function savedReply(
     .eq("user_id", userId)
     .gte("logged_at", startOfDay.toISOString());
 
-  const dayCarbs = (todays ?? []).reduce(
-    (sum: number, r: { carbs_grams: number | null }) => sum + (r.carbs_grams ?? 0),
-    0,
-  );
-
-  const details = [
-    entry.carbs_grams ? `~${entry.carbs_grams}g carbs` : null,
-    entry.portion_size ? `${entry.portion_size} portion` : null,
-  ]
-    .filter(Boolean)
-    .join(", ");
-
-  const lines = [`Saved: ${entry.label}${details ? ` (${details})` : ""}.`];
-  if (dayCarbs > 0) lines.push(`That's about ${dayCarbs}g of carbs logged today.`);
-  lines.push("Thanks for sharing 💚 I'll check in with you a little later.");
-
-  return lines.join("\n");
+  return savedReplyText(entry, sumCarbs(todays as Array<{ carbs_grams: number | null }> | null));
 }
 
 
@@ -227,8 +193,10 @@ Deno.serve(async (req) => {
       );
     }
 
+    const intent = interpretReply(body);
+
     // Simple opt-out courtesy.
-    if (/^(stop|unsubscribe|cancel)$/i.test(body)) {
+    if (intent === "stop") {
       await supabase
         .from("notification_prefs")
         .upsert({ user_id: userId, post_meal_sms_enabled: false }, { onConflict: "user_id" });
@@ -252,7 +220,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (pending) {
-      if (/^(yes|y|yeah|yep|ok|okay|correct|confirm|save)\b/i.test(body)) {
+      if (intent === "confirm") {
         const { data: savedLog, error: insertError } = await supabase.from("food_logs").insert({
           user_id: userId,
           type: pending.type,
@@ -283,7 +251,7 @@ Deno.serve(async (req) => {
 
       }
 
-      if (/^(no|n|nope|discard|delete|nevermind|never mind)\b/i.test(body)) {
+      if (intent === "discard") {
         await supabase.from("sms_pending_logs").update({ status: "discarded" }).eq("id", pending.id);
         return await respondAndLog(
           audit,
