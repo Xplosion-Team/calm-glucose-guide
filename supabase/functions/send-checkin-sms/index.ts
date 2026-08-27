@@ -6,6 +6,7 @@
 // Plus a 10am-local nudge if nothing logged today.
 // Always positive language, no clinical content.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendSms } from "../_shared/sms.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
