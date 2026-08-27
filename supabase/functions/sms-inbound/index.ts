@@ -193,8 +193,10 @@ Deno.serve(async (req) => {
       );
     }
 
+    const intent = interpretReply(body);
+
     // Simple opt-out courtesy.
-    if (/^(stop|unsubscribe|cancel)$/i.test(body)) {
+    if (intent === "stop") {
       await supabase
         .from("notification_prefs")
         .upsert({ user_id: userId, post_meal_sms_enabled: false }, { onConflict: "user_id" });
@@ -218,7 +220,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (pending) {
-      if (/^(yes|y|yeah|yep|ok|okay|correct|confirm|save)\b/i.test(body)) {
+      if (intent === "confirm") {
         const { data: savedLog, error: insertError } = await supabase.from("food_logs").insert({
           user_id: userId,
           type: pending.type,
@@ -249,7 +251,7 @@ Deno.serve(async (req) => {
 
       }
 
-      if (/^(no|n|nope|discard|delete|nevermind|never mind)\b/i.test(body)) {
+      if (intent === "discard") {
         await supabase.from("sms_pending_logs").update({ status: "discarded" }).eq("id", pending.id);
         return await respondAndLog(
           audit,
