@@ -12,6 +12,7 @@ import {
   Heart,
   Sparkles,
   Apple,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
@@ -26,6 +27,8 @@ import { TodayTab } from "@/components/tabs/TodayTab";
 import { JourneyTab } from "@/components/tabs/JourneyTab";
 import { CirclesTab } from "@/components/tabs/CirclesTab";
 import { HealthTab } from "@/components/tabs/HealthTab";
+import { AdminTab } from "@/components/tabs/AdminTab";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useGlucoseData } from "@/hooks/useGlucoseData";
 import { useSpikeDetection } from "@/hooks/useSpikeDetection";
 import { SpikeBanner } from "@/components/spike/SpikeBanner";
@@ -86,12 +89,14 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<TabId>("journey");
   const [journeySub, setJourneySub] = useState<JourneySub>("today");
   const [exploreSub, setExploreSub] = useState<ExploreSub>("whatif");
+  const { isAdmin } = useIsAdmin();
 
   // Build translated tab arrays
   const bottomTabs = [
     { id: "journey" as TabId, label: t("nav.journey"), icon: Map },
     { id: "health" as TabId, label: t("nav.circles"), icon: Users },
     { id: "explore" as TabId, label: t("nav.explore"), icon: Compass },
+    ...(isAdmin ? [{ id: "admin" as TabId, label: "Admin", icon: ShieldCheck }] : []),
   ];
 
   const journeySubs = [
