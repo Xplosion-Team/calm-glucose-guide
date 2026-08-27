@@ -1,0 +1,181 @@
+{
+  "version": 1,
+  "sdk_version": "0.28.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://piaynhopsyvryikngxyq.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "gentle-glucose-companion",
+      "version": "0.1.0",
+      "title": "Gentle Glucose Companion"
+    },
+    "tools": [
+      {
+        "name": "log_entry",
+        "title": "Log food, drink, or medication",
+        "description": "Add a food, drink, or medication entry to the signed-in person's journal. Use for statements like 'I had oatmeal for breakfast'.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "food",
+                "drink",
+                "med"
+              ],
+              "description": "What kind of entry this is."
+            },
+            "label": {
+              "type": "string",
+              "description": "Short name of the item, e.g. 'oatmeal with berries'."
+            },
+            "carbs_grams": {
+              "description": "Estimated carbohydrates in grams.",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "portion_size": {
+              "description": "Portion size.",
+              "type": "string",
+              "enum": [
+                "small",
+                "medium",
+                "large"
+              ]
+            },
+            "logged_at": {
+              "description": "ISO 8601 timestamp of when it was consumed. Defaults to now.",
+              "type": "string"
+            },
+            "notes": {
+              "description": "Any extra detail worth keeping with the entry.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "label"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_entries",
+        "title": "List journal entries",
+        "description": "Read recent food, drink, and medication entries from the signed-in person's journal, newest first.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "days": {
+              "description": "How many days back to look. Defaults to 1 (today).",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "type": {
+              "description": "Only return this kind of entry.",
+              "type": "string",
+              "enum": [
+                "food",
+                "drink",
+                "med"
+              ]
+            },
+            "limit": {
+              "description": "Maximum entries to return. Defaults to 50.",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "glucose_summary",
+        "title": "Glucose summary",
+        "description": "Summarize the signed-in person's continuous glucose readings over a period: average, time in range, and the most recent reading.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "days": {
+              "description": "How many days back to summarize. Defaults to 7.",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_medications",
+        "title": "List medications",
+        "description": "List the signed-in person's medications, with recent doses taken. Read-only — this never changes a prescription.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "include_stopped": {
+              "description": "Include medications no longer taken. Defaults to false.",
+              "type": "boolean"
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "daily_insight",
+        "title": "Daily insight",
+        "description": "Fetch the most recent personalized daily insight generated for the signed-in person, including its narrative and suggestions.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "date": {
+              "description": "Specific day as YYYY-MM-DD. Defaults to the latest available.",
+              "type": "string"
+            }
+          }
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
