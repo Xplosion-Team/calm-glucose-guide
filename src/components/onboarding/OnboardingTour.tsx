@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import Joyride, { Step, CallBackProps, STATUS, EVENTS } from "react-joyride";
 
-type TourTabId = "journey" | "twin" | "health" | "explore";
+import type { TabId } from "@/components/BottomNav";
+
+type TourTabId = TabId;
 
 interface OnboardingTourProps {
   run: boolean;

@@ -1282,6 +1282,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       dexcom_connection_status: {
@@ -1313,10 +1334,30 @@ export type Database = {
       }
     }
     Functions: {
+      admin_sms_approval_stats: {
+        Args: { _days?: number }
+        Returns: {
+          approved: number
+          discarded: number
+          inbound_messages: number
+          label: string
+          last_activity: string
+          outbound_messages: number
+          pending: number
+          user_id: string
+        }[]
+      }
       find_user_by_phone: { Args: { _variants: string[] }; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1443,6 +1484,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
