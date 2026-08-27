@@ -5,6 +5,7 @@
 //   2. Otherwise the text is treated as a new food/drink entry: analyze-food
 //      estimates the label, carbs and portion, and a food_log row is inserted.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logSmsEvent, updateSmsEvent } from "../_shared/smsAudit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -120,6 +121,41 @@ async function savedReply(
 
 
 
+// Records the inbound text's result and the reply we send back, then returns
+// the TwiML response. Every path through the webhook goes through this so the
+// audit log never has a gap.
+async function respondAndLog(
+  audit: { inboundId: string | null; userId: string | null; phone: string },
+  message: string,
+  detail: {
+    purpose: string;
+    outcome: string;
+    status?: string;
+    relatedTable?: string | null;
+    relatedId?: string | null;
+  },
+) {
+  await updateSmsEvent(audit.inboundId, {
+    purpose: detail.purpose,
+    outcome: detail.outcome,
+    status: detail.status ?? "received",
+    relatedTable: detail.relatedTable ?? null,
+    relatedId: detail.relatedId ?? null,
+  });
+  await logSmsEvent({
+    userId: audit.userId,
+    direction: "outbound",
+    phone: audit.phone,
+    body: message,
+    provider: "twilio",
+    status: "sent",
+    purpose: `reply: ${detail.purpose}`,
+    relatedTable: detail.relatedTable ?? null,
+    relatedId: detail.relatedId ?? null,
+  });
+  return reply(message);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -141,6 +177,15 @@ Deno.serve(async (req) => {
     }
 
     if (!from || !body) {
+      await logSmsEvent({
+        direction: "inbound",
+        phone: from || "unknown",
+        body,
+        provider: contentType.includes("application/json") ? "ringcentral" : "twilio",
+        status: "ignored",
+        purpose: "unreadable message",
+        outcome: "Could not read the sender or the message text",
+      });
       return reply("Sorry, I didn't catch that. Text me what you ate or drank and I'll log it.");
     }
 
@@ -155,9 +200,31 @@ Deno.serve(async (req) => {
     });
     if (lookupError) console.error("phone lookup failed", lookupError);
 
+    // Log the inbound text immediately — even from an unknown number — so the
+    // audit trail shows messages that arrived but couldn't be matched.
+    const inboundId = await logSmsEvent({
+      userId: (userId as string) ?? null,
+      direction: "inbound",
+      phone: from,
+      body,
+      provider: contentType.includes("application/json") ? "ringcentral" : "twilio",
+      status: "received",
+      purpose: "incoming text",
+      metadata: { matched_account: Boolean(userId) },
+    });
+
+    const audit = { inboundId, userId: (userId as string) ?? null, phone: from };
 
     if (!userId) {
-      return reply("Welcome! Please sign up in the Calm Glucose app so I can save your entries.");
+      return await respondAndLog(
+        audit,
+        "Welcome! Please sign up in the Calm Glucose app so I can save your entries.",
+        {
+          purpose: "unknown sender",
+          outcome: "No account matches this phone number",
+          status: "unmatched",
+        },
+      );
     }
 
     // Simple opt-out courtesy.
@@ -165,7 +232,11 @@ Deno.serve(async (req) => {
       await supabase
         .from("notification_prefs")
         .upsert({ user_id: userId, post_meal_sms_enabled: false }, { onConflict: "user_id" });
-      return reply("Okay — I won't text you check-ins anymore. You can turn them back on in the app.");
+      return await respondAndLog(
+        audit,
+        "Okay — I won't text you check-ins anymore. You can turn them back on in the app.",
+        { purpose: "opt-out", outcome: "Check-in texts turned off" },
+      );
     }
 
     // 0. Waiting on a confirmation for something they just texted in?
@@ -182,7 +253,7 @@ Deno.serve(async (req) => {
 
     if (pending) {
       if (/^(yes|y|yeah|yep|ok|okay|correct|confirm|save)\b/i.test(body)) {
-        const { error: insertError } = await supabase.from("food_logs").insert({
+        const { data: savedLog, error: insertError } = await supabase.from("food_logs").insert({
           user_id: userId,
           type: pending.type,
           label: pending.label,
@@ -190,22 +261,35 @@ Deno.serve(async (req) => {
           portion_size: pending.portion_size,
           source: "sms",
           notes: pending.label === pending.original_text.slice(0, 60) ? null : pending.original_text,
-        });
+        }).select("id").maybeSingle();
         if (insertError) {
           console.error("food_logs insert failed", insertError);
-          return reply("I couldn't save that just now. Please try again in a moment.");
+          return await respondAndLog(
+            audit,
+            "I couldn't save that just now. Please try again in a moment.",
+            { purpose: "confirmation", outcome: `Save failed: ${insertError.message}`, status: "failed" },
+          );
         }
         await supabase
           .from("sms_pending_logs")
           .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
           .eq("id", pending.id);
-        return reply(await savedReply(supabase, userId as string, pending));
+        return await respondAndLog(audit, await savedReply(supabase, userId as string, pending), {
+          purpose: "confirmation",
+          outcome: `Saved "${pending.label}" to the journal`,
+          relatedTable: "food_logs",
+          relatedId: (savedLog?.id as string) ?? null,
+        });
 
       }
 
       if (/^(no|n|nope|discard|delete|nevermind|never mind)\b/i.test(body)) {
         await supabase.from("sms_pending_logs").update({ status: "discarded" }).eq("id", pending.id);
-        return reply("No problem — I didn't save it. Text me again whenever you're ready.");
+        return await respondAndLog(
+          audit,
+          "No problem — I didn't save it. Text me again whenever you're ready.",
+          { purpose: "confirmation", outcome: "Entry discarded" },
+        );
       }
 
       // Anything else is treated as an edit to the entry we're holding.
@@ -221,7 +305,16 @@ Deno.serve(async (req) => {
           original_text: body,
         })
         .eq("id", pending.id);
-      return reply(confirmPrompt(revised.label, revised.carbs, revised.portion));
+      return await respondAndLog(
+        audit,
+        confirmPrompt(revised.label, revised.carbs, revised.portion),
+        {
+          purpose: "correction",
+          outcome: `Draft updated to "${revised.label}" — waiting for confirmation`,
+          relatedTable: "sms_pending_logs",
+          relatedId: pending.id as string,
+        },
+      );
     }
 
     // 1. Is this a reply to a check-in we sent recently?
@@ -254,8 +347,15 @@ Deno.serve(async (req) => {
         .update({ status: "responded", responded_at: new Date().toISOString() })
         .eq("id", reminder.id);
 
-      return reply(
+      return await respondAndLog(
+        audit,
         `Thank you — I added that to your ${reminder.meal_label} entry. 💚`,
+        {
+          purpose: "check-in reply",
+          outcome: `Added as a note on the ${reminder.meal_label} entry`,
+          relatedTable: "food_logs",
+          relatedId: reminder.food_log_id as string,
+        },
       );
     }
 
@@ -263,7 +363,7 @@ Deno.serve(async (req) => {
     const type = classify(body);
     const draft = await analyzeEntry(supabase, body, type);
 
-    const { error: draftError } = await supabase.from("sms_pending_logs").insert({
+    const { data: draftRow, error: draftError } = await supabase.from("sms_pending_logs").insert({
       user_id: userId,
       type,
       label: draft.label,
@@ -271,14 +371,27 @@ Deno.serve(async (req) => {
       portion_size: draft.portion,
       original_text: body,
       status: "pending",
-    });
+    }).select("id").maybeSingle();
 
     if (draftError) {
       console.error("sms_pending_logs insert failed", draftError);
-      return reply("I couldn't save that just now. Please try again in a moment.");
+      return await respondAndLog(
+        audit,
+        "I couldn't save that just now. Please try again in a moment.",
+        { purpose: "new entry", outcome: `Draft failed: ${draftError.message}`, status: "failed" },
+      );
     }
 
-    return reply(confirmPrompt(draft.label, draft.carbs, draft.portion));
+    return await respondAndLog(
+      audit,
+      confirmPrompt(draft.label, draft.carbs, draft.portion),
+      {
+        purpose: "new entry",
+        outcome: `Read as "${draft.label}" — waiting for confirmation`,
+        relatedTable: "sms_pending_logs",
+        relatedId: (draftRow?.id as string) ?? null,
+      },
+    );
 
   } catch (e) {
     console.error("sms-inbound error", e);
