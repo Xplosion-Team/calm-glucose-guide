@@ -13,7 +13,13 @@ export interface NotificationPrefs {
   post_meal_sms_enabled: boolean;
   post_meal_trigger: "auto" | "time" | "spike";
   sms_provider: "twilio" | "ringcentral";
+  persona_type: PersonaType;
+  persona_name: string | null;
+  voice_style: VoiceStyle;
 }
+
+export type PersonaType = "standard" | "comedian" | "celebrity" | "custom";
+export type VoiceStyle = "encouraging" | "witty" | "direct" | "calm";
 
 const DEFAULTS: NotificationPrefs = {
   spike_enabled: true,
@@ -27,12 +33,16 @@ const DEFAULTS: NotificationPrefs = {
   post_meal_sms_enabled: false,
   post_meal_trigger: "auto",
   sms_provider: "twilio",
+  persona_type: "standard",
+  persona_name: null,
+  voice_style: "calm",
 };
 
 
 export function useNotificationPrefs() {
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULTS);
   const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -56,10 +66,16 @@ export function useNotificationPrefs() {
     if (!u.user) return;
     const next = { ...prefs, ...patch };
     setPrefs(next);
-    await supabase
+    setSaving(true);
+    const { error } = await supabase
       .from("notification_prefs")
       .upsert({ user_id: u.user.id, ...next }, { onConflict: "user_id" });
+    setSaving(false);
+    if (error) {
+      setPrefs(prefs);
+      throw error;
+    }
   }, [prefs]);
 
-  return { prefs, save, loaded };
+  return { prefs, save, loaded, saving };
 }
