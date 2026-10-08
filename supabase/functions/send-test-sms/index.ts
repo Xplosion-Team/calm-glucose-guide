@@ -43,10 +43,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    let body: { provider?: string } = {};
+    let body: { provider?: string; to?: unknown; message?: unknown } = {};
     try {
       body = await req.json();
     } catch (_) { /* empty body is fine */ }
+
+    if (body.to !== undefined || body.message !== undefined) {
+      return new Response(JSON.stringify({ error: "Recipient and message are set from your account preferences." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const service = createClient(
       Deno.env.get("SUPABASE_URL")!,
