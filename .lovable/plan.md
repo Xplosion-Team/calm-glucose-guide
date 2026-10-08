@@ -1,94 +1,68 @@
-# Add Games to Circles Tab
+# Nudge Persona & Voice Settings
 
-Add a Games section to the Circles tab where users can play simple games designed for seniors. After finishing a game, they're gently prompted with a short diabetes/glucose knowledge question to reinforce learning.
+## Goal
 
-## Scope
+Let each signed-in member choose who reminders feel like they come from and the tone used for both in-app nudges and reminder SMS. Keep every message warm, accurate, short, and within the app’s health-safety boundaries.
 
-- Games live **inside the Circles tab** (per request), as a new section below the existing "Recent love" feed.
-- A `GamesTab` component already exists at `src/components/tabs/GamesTab.tsx` — review and reuse/refactor rather than duplicate.
-- All UI follows senior-first rules: 18px+ text, large tap targets, sage palette, warm tone, no clinical jargon.
+## User experience
 
-## Games to include (v1)
+- Add a senior-friendly **Nudge Persona & Voice Settings** panel to Account.
+- Persona choices:
+  - Standard Guide (default)
+  - Comedian
+  - Spokesperson / Celebrity
+  - Custom Persona
+- For celebrity/custom choices, show large quick-select chips for the requested examples plus **Or type your own favorite persona…**.
+- Tone choices:
+  - Encouraging & Upbeat
+  - Sarcastic & Witty
+  - Direct / Tough Love
+  - Calm & Mindful
+- Show a live in-app sample so members can understand the selected style before saving.
+- Add **Send Test SMS Nudge**. It sends only to the phone already linked to the signed-in account, then reports sent/failed clearly.
+- Keep English and Spanish labels aligned with the app’s language switch.
 
-Pick 3 calm, low-cognitive-load games suitable for 65+:
+## Message behavior
 
-1. **Solitaire (Klondike)** — single-player, familiar, relaxing.
-2. **Memory Match** — flip pairs of cards; gentle difficulty.
-3. **Word Search** — diabetes-friendly food and wellness words baked into the grid.
+- Apply the saved persona and tone to:
+  - post-meal in-app check-ins;
+  - unexplained-rise in-app logging nudges;
+  - post-meal SMS reminders;
+  - inactive-user check-in SMS reminders;
+  - the test SMS preview.
+- Preserve required actions and facts verbatim in meaning: what prompted the nudge, what the member should log, and any YES/NO reply instruction.
+- Keep transactional confirmations and audit wording unchanged; only nudges/reminders get persona styling.
 
-Spades is fun but requires 4 players / bots with bidding logic — too heavy for v1. Note it as "Coming soon" if the user wants it visible.
+## Safe personalization
 
-## Post-game learning prompt
+- Use Lovable AI on the server to create short SMS copy from structured facts plus the saved persona and tone.
+- Never send glucose thresholds, diagnoses, medication advice, dose/timing suggestions, insults, profanity, fear, shame, or coercion.
+- Treat named public figures as high-level inspiration only: never claim the message is actually from them, reproduce signature catchphrases, or imitate them exactly.
+- “Sarcastic” and “tough love” stay playful and respectful, especially for the senior audience.
+- Validate AI output for length and required action. If generation is unavailable, use a safe tone-aware template so scheduled reminders are not lost.
 
-When a game ends (win, loss, or "I'm done"):
+## Data and access
 
-- Show a soft modal: *"Nice round! Here's a quick thought to take with you."*
-- One multiple-choice question from a curated pool (3–4 options, one correct).
-- Topics: hydration, gentle movement after meals, fiber, sleep, what numbers generally mean — **never** dosing, thresholds, or anything that could read as medical advice (per Safety Boundaries memory).
-- Show a warm explanation after they answer, correct or not. No score, no streak pressure.
-- "Skip for now" always available.
+- Extend each member’s existing private notification preferences with:
+  - persona type;
+  - optional persona name;
+  - voice style.
+- Keep Standard Guide plus Calm & Mindful as safe defaults for existing members.
+- Preserve the existing owner-only access rules on notification preferences.
+- Harden the test endpoint so a signed-in member cannot supply an arbitrary destination number; it resolves the member’s linked phone on the server.
 
-Question bank lives in `src/lib/games/glucose-questions.ts` as a typed array. Easy to extend.
+## Technical implementation
 
-## UI structure
+- Add a database migration for the preference columns and validation constraints.
+- Extend the notification preferences hook and settings UI with typed fields, immediate saving, loading, disabled, and success/error states.
+- Add shared server-only persona prompt/validation and Lovable AI Gateway helpers using the Responses API, `openai/gpt-6-astra`, request-scoped run IDs, and required reasoning/store options.
+- Update reminder functions to fetch persona preferences and pass structured reminder facts into the shared generator.
+- Add a small shared frontend formatter so in-app banners use the same selected persona/tone without exposing prompts or model calls in the browser.
+- Record the shared personalization boundary in `AGENTS.md`.
 
-```text
-CirclesTab
-├── Hero
-├── Trusted people (existing)
-├── Recent love (existing)
-└── Games & Learning (NEW)
-    ├── Section header + short caption
-    └── 3 game cards (icon, title, 1-line description, Play button)
+## Verification
 
-GameModal (full-screen drawer on mobile, dialog on desktop)
-├── Game surface
-└── On finish → PostGameQuestion → Close
-```
-
-## Files
-
-**New**
-- `src/components/circles/GamesSection.tsx` — the section rendered inside CirclesTab.
-- `src/components/circles/GameLauncher.tsx` — modal/drawer wrapper that hosts a game and chains the question on finish.
-- `src/components/circles/PostGameQuestion.tsx` — question UI.
-- `src/components/games/SolitaireGame.tsx`
-- `src/components/games/MemoryMatchGame.tsx`
-- `src/components/games/WordSearchGame.tsx`
-- `src/lib/games/glucose-questions.ts` — question bank + helper to pick a random unseen one.
-- `src/hooks/useGamePlayHistory.ts` — localStorage-backed: last played, questions seen, simple "rounds played" counter.
-
-**Modified**
-- `src/components/tabs/CirclesTab.tsx` — render `<GamesSection />` at the bottom, update `useScreenContext` highlights to mention games.
-- `src/i18n/translations.ts` — add game titles, button labels, question prompt copy (EN + existing locales).
-- `src/components/tabs/GamesTab.tsx` — if it duplicates this work, remove or refactor to re-export `GamesSection`.
-
-No database, no edge functions, no backend changes. Pure frontend, localStorage only.
-
-## Game implementation notes (technical)
-
-- **Solitaire**: lightweight from-scratch implementation using existing card primitives; standard Klondike rules, drag-and-drop with `@dnd-kit/core` (already common in shadcn projects — confirm in package.json, otherwise tap-to-move fallback). Auto-complete button when win is forced.
-- **Memory Match**: 4×4 grid of emoji pairs (fruit/garden theme to match sage aesthetic). Pure React state.
-- **Word Search**: 10×10 grid generated at mount from a curated word list (`WALK`, `WATER`, `SLEEP`, `FIBER`, `GREENS`, `CALM`, etc.). Tap first and last letter to select a word.
-- All games expose `onFinish(result: { outcome: "win" | "quit"; durationSec: number })` so `GameLauncher` can chain the question prompt uniformly.
-- Accessibility: keyboard navigation, `aria-live` for game state changes, 18px+ text, focus trap inside modal.
-
-## Safety guardrails on questions
-
-- Curated bank only — no LLM generation, so we control every word.
-- No numeric thresholds, no medication names, no "should/must" language.
-- Every explanation ends with a soft reminder: *"Your care team knows you best."*
-- Reviewed against the Safety Boundaries memory before shipping.
-
-## Out of scope
-
-- Multiplayer / Spades.
-- Leaderboards, achievements, streaks.
-- Saving game stats to the backend (localStorage is enough for v1).
-- Tying questions to the user's actual glucose data.
-
-## Open questions
-
-1. Keep Games inside Circles, or also expose a shortcut from the bottom nav? (Plan assumes Circles-only.)
-2. Should the question appear after **every** game, or only ~1 in 3 so it doesn't feel like homework?
-3. Want Spades listed as "Coming soon" or hidden entirely for v1?
+- Test preference defaults, custom persona validation, tone selection, and safe in-app formatting.
+- Test the authenticated test-SMS endpoint rejects arbitrary recipient input and uses the linked account number.
+- Exercise the real Account flow in the preview and send one real test SMS to the signed-in test account.
+- Verify the outbound audit log records the test and the current build remains healthy.
