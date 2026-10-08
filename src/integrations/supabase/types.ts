@@ -695,6 +695,8 @@ export type Database = {
         Row: {
           daily_insight_enabled: boolean
           daily_insight_hour: number
+          persona_name: string | null
+          persona_type: string
           post_meal_delay_min: number
           post_meal_enabled: boolean
           post_meal_sms_enabled: boolean
@@ -706,10 +708,13 @@ export type Database = {
           spike_sensitivity: string
           updated_at: string
           user_id: string
+          voice_style: string
         }
         Insert: {
           daily_insight_enabled?: boolean
           daily_insight_hour?: number
+          persona_name?: string | null
+          persona_type?: string
           post_meal_delay_min?: number
           post_meal_enabled?: boolean
           post_meal_sms_enabled?: boolean
@@ -721,10 +726,13 @@ export type Database = {
           spike_sensitivity?: string
           updated_at?: string
           user_id: string
+          voice_style?: string
         }
         Update: {
           daily_insight_enabled?: boolean
           daily_insight_hour?: number
+          persona_name?: string | null
+          persona_type?: string
           post_meal_delay_min?: number
           post_meal_enabled?: boolean
           post_meal_sms_enabled?: boolean
@@ -736,6 +744,7 @@ export type Database = {
           spike_sensitivity?: string
           updated_at?: string
           user_id?: string
+          voice_style?: string
         }
         Relationships: []
       }

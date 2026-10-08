@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface NotificationPrefs {
@@ -13,7 +13,13 @@ export interface NotificationPrefs {
   post_meal_sms_enabled: boolean;
   post_meal_trigger: "auto" | "time" | "spike";
   sms_provider: "twilio" | "ringcentral";
+  persona_type: PersonaType;
+  persona_name: string | null;
+  voice_style: VoiceStyle;
 }
+
+export type PersonaType = "standard" | "comedian" | "celebrity" | "custom";
+export type VoiceStyle = "encouraging" | "witty" | "direct" | "calm";
 
 const DEFAULTS: NotificationPrefs = {
   spike_enabled: true,
@@ -27,12 +33,17 @@ const DEFAULTS: NotificationPrefs = {
   post_meal_sms_enabled: false,
   post_meal_trigger: "auto",
   sms_provider: "twilio",
+  persona_type: "standard",
+  persona_name: null,
+  voice_style: "calm",
 };
 
 
 export function useNotificationPrefs() {
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULTS);
   const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const prefsRef = useRef<NotificationPrefs>(DEFAULTS);
 
   useEffect(() => {
     let mounted = true;
@@ -45,7 +56,11 @@ export function useNotificationPrefs() {
         .eq("user_id", u.user.id)
         .maybeSingle();
       if (!mounted) return;
-      if (data) setPrefs({ ...DEFAULTS, ...(data as Partial<NotificationPrefs>) });
+      if (data) {
+        const next = { ...DEFAULTS, ...(data as Partial<NotificationPrefs>) };
+        prefsRef.current = next;
+        setPrefs(next);
+      }
       setLoaded(true);
     })();
     return () => { mounted = false; };
@@ -54,12 +69,21 @@ export function useNotificationPrefs() {
   const save = useCallback(async (patch: Partial<NotificationPrefs>) => {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
-    const next = { ...prefs, ...patch };
+    const previous = prefsRef.current;
+    const next = { ...previous, ...patch };
+    prefsRef.current = next;
     setPrefs(next);
-    await supabase
+    setSaving(true);
+    const { error } = await supabase
       .from("notification_prefs")
       .upsert({ user_id: u.user.id, ...next }, { onConflict: "user_id" });
-  }, [prefs]);
+    setSaving(false);
+    if (error) {
+      prefsRef.current = previous;
+      setPrefs(previous);
+      throw error;
+    }
+  }, []);
 
-  return { prefs, save, loaded };
+  return { prefs, save, loaded, saving };
 }

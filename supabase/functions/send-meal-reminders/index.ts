@@ -8,6 +8,7 @@
 // In-app delivery is handled by the client reading the same table.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendSms, type SmsProvider } from "../_shared/sms.ts";
+import { generateNudge } from "../_shared/nudgePersona.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -123,7 +124,7 @@ Deno.serve(async (req) => {
         supabase
           .from("notification_prefs")
           .select(
-            "post_meal_enabled, post_meal_sms_enabled, post_meal_trigger, sms_provider, spike_sensitivity, quiet_start_hour, quiet_end_hour",
+            "post_meal_enabled, post_meal_sms_enabled, post_meal_trigger, sms_provider, spike_sensitivity, quiet_start_hour, quiet_end_hour, persona_type, persona_name, voice_style",
           )
           .eq("user_id", r.user_id)
           .maybeSingle(),
@@ -180,12 +181,13 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const body =
-        reason === "spike"
-          ? `Your glucose has been climbing since your ${r.meal_label} 🌿 How are you feeling? ` +
-            `Reply with a few words and I'll add it to your journal.`
-          : `Checking in about your ${r.meal_label} 🌿 How are you feeling now? ` +
-            `Reply with a few words and I'll add it to your journal.`;
+      const body = await generateNudge({
+        purpose: "post_meal",
+        context: reason === "spike"
+          ? `This is a check-in after the member's ${r.meal_label}; their glucose changed afterward.`
+          : `This is a scheduled check-in after the member's ${r.meal_label}.`,
+        requiredAction: "Reply with a few words about how you feel and they will be added to your journal.",
+      }, prefs ?? {}, req.signal);
 
       const result = await sendSms(
         engagement!.phone as string,

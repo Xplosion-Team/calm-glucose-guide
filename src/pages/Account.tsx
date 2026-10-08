@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, ChevronRight, Mail, Lock, Loader2 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
+import { NudgePersonaCard } from "@/components/settings/NudgePersonaCard";
 
 export default function Account() {
   const [email, setEmail] = useState<string>("");
@@ -40,6 +41,7 @@ export default function Account() {
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
+          <div className="space-y-5">
           <Card className="rounded-2xl p-5 space-y-5">
             <div>
               <p className="text-sm text-muted-foreground">{t("account.currentEmail")}</p>
@@ -68,6 +70,8 @@ export default function Account() {
               </Button>
             </div>
           </Card>
+          <NudgePersonaCard />
+          </div>
         )}
       </div>
     </div>

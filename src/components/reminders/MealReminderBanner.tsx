@@ -2,6 +2,8 @@ import { Bell, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { MealReminder } from "@/hooks/useMealReminders";
+import { useNotificationPrefs } from "@/hooks/useNotificationPrefs";
+import { formatInAppNudge } from "@/lib/nudge-persona";
 
 interface Props {
   reminder: MealReminder;
@@ -15,6 +17,8 @@ interface Props {
  * comes due (default: two hours after the meal).
  */
 export function MealReminderBanner({ reminder, onCheckIn, onSnooze, onDismiss }: Props) {
+  const { prefs } = useNotificationPrefs();
+  const message = formatInAppNudge("meal", prefs, reminder.meal_label);
   return (
     <Card className="border-primary/30 bg-primary/5 shadow-sm">
       <CardContent className="p-4 space-y-3">
@@ -24,19 +28,22 @@ export function MealReminderBanner({ reminder, onCheckIn, onSnooze, onDismiss }:
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-foreground">
-              How did your {reminder.meal_label} settle?
+              {message.title}
             </p>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              It's been a couple of hours. A quick note now helps us learn your rhythm.
+              {message.body}
             </p>
           </div>
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
             aria-label="Dismiss reminder"
             onClick={onDismiss}
-            className="p-1 text-muted-foreground hover:text-foreground shrink-0"
+            className="text-muted-foreground shrink-0"
           >
             <X className="w-4 h-4" aria-hidden="true" />
-          </button>
+          </Button>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button size="sm" className="min-h-[44px]" onClick={onCheckIn}>

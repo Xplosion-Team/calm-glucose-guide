@@ -2,6 +2,8 @@ import { TrendingUp, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { PendingSpike } from "@/hooks/useSpikeDetection";
+import { useNotificationPrefs } from "@/hooks/useNotificationPrefs";
+import { formatInAppNudge } from "@/lib/nudge-persona";
 
 interface Props {
   spike: PendingSpike;
@@ -17,6 +19,8 @@ interface Props {
  * SmartLogCard workflow — no new logging UI is introduced.
  */
 export function SpikeBanner({ spike, onLogMeal, onLogDrink, onNotFood, onDismiss }: Props) {
+  const { prefs } = useNotificationPrefs();
+  const message = formatInAppNudge("spike", prefs);
   return (
     <Card className="border-amber-200 bg-amber-50/70 dark:bg-amber-950/30 shadow-sm">
       <CardContent className="p-4 space-y-3">
@@ -26,20 +30,22 @@ export function SpikeBanner({ spike, onLogMeal, onLogDrink, onNotFood, onDismiss
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-foreground">
-              📈 We noticed your glucose rising quickly
+              {message.title}
             </p>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Up {Math.round(spike.rise_mg_dl)} mg/dL in about {spike.window_min} minutes
-              (now around {Math.round(spike.peak_mg_dl)} mg/dL). Did you recently eat or drink?
+              {message.body}
             </p>
           </div>
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
             aria-label="Dismiss"
             onClick={onDismiss}
-            className="p-1 text-muted-foreground hover:text-foreground shrink-0"
+            className="text-muted-foreground shrink-0"
           >
             <X className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
         <div className="grid grid-cols-3 gap-2">
           <Button size="sm" onClick={onLogMeal} className="touch-target">Log meal</Button>

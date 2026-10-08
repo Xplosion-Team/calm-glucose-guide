@@ -7,22 +7,12 @@
 // Always positive language, no clinical content.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendSms } from "../_shared/sms.ts";
+import { generateNudge } from "../_shared/nudgePersona.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, content-type",
 };
-
-const MESSAGES = [
-  "Good morning from Calm Glucose 🌿 A quick note about a meal or drink helps me learn your rhythm. Just text back what you had.",
-  "Hi there 🌞 Whenever you have a moment, share what you ate or drank — even a few words is plenty.",
-  "Thinking of you today. If you'd like, text me your last meal or snack and I'll log it for you.",
-  "A gentle hello 💚 Sharing a meal helps your journey. Just reply with what you had.",
-];
-
-function pickMessage(seed: number) {
-  return MESSAGES[seed % MESSAGES.length];
-}
 
 // Local hour for a user's timezone (falls back to US Central).
 function localHour(tz: string | null, now: Date): number {
@@ -100,7 +90,16 @@ Deno.serve(async (req) => {
 
       if (!shouldSend) continue;
 
-      const body = pickMessage(now.getUTCDate() + (r.user_id?.charCodeAt(0) ?? 0));
+      const { data: prefs } = await supabase
+        .from("notification_prefs")
+        .select("persona_type, persona_name, voice_style, sms_provider")
+        .eq("user_id", r.user_id)
+        .maybeSingle();
+      const body = await generateNudge({
+        purpose: "inactive",
+        context: "A meal or drink has not been logged recently.",
+        requiredAction: "Text back what you ate or drank and it will be added to your journal.",
+      }, prefs ?? {}, req.signal);
       const result = await sendSms(r.phone, body, "twilio", {
         userId: r.user_id as string,
         purpose: "engagement check-in",
