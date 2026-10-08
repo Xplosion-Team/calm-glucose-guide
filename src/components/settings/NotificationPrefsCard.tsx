@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useNotificationPrefs } from "@/hooks/useNotificationPrefs";
 
 /**
- * User-configurable controls for the two proactive features:
+ * User-configurable controls for proactive reminder timing and delivery.
  *  - post-meal spike reminders (on/off + sensitivity + quiet hours)
  *  - daily insight delivery hour
  */
