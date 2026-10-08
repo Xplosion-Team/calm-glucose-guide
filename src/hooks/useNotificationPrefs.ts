@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface NotificationPrefs {
@@ -43,6 +43,7 @@ export function useNotificationPrefs() {
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULTS);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const prefsRef = useRef<NotificationPrefs>(DEFAULTS);
 
   useEffect(() => {
     let mounted = true;
@@ -55,7 +56,11 @@ export function useNotificationPrefs() {
         .eq("user_id", u.user.id)
         .maybeSingle();
       if (!mounted) return;
-      if (data) setPrefs({ ...DEFAULTS, ...(data as Partial<NotificationPrefs>) });
+      if (data) {
+        const next = { ...DEFAULTS, ...(data as Partial<NotificationPrefs>) };
+        prefsRef.current = next;
+        setPrefs(next);
+      }
       setLoaded(true);
     })();
     return () => { mounted = false; };
@@ -64,7 +69,9 @@ export function useNotificationPrefs() {
   const save = useCallback(async (patch: Partial<NotificationPrefs>) => {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
-    const next = { ...prefs, ...patch };
+    const previous = prefsRef.current;
+    const next = { ...previous, ...patch };
+    prefsRef.current = next;
     setPrefs(next);
     setSaving(true);
     const { error } = await supabase
@@ -72,10 +79,11 @@ export function useNotificationPrefs() {
       .upsert({ user_id: u.user.id, ...next }, { onConflict: "user_id" });
     setSaving(false);
     if (error) {
-      setPrefs(prefs);
+      prefsRef.current = previous;
+      setPrefs(previous);
       throw error;
     }
-  }, [prefs]);
+  }, []);
 
   return { prefs, save, loaded, saving };
 }

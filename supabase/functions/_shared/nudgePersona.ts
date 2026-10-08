@@ -40,7 +40,8 @@ function fallback(facts: NudgeFacts, prefs: PersonaPrefs) {
 function valid(text: string, requiredAction: string) {
   const unsafe = /\b(diagnos|dose|dosage|insulin units|emergency|stupid|lazy|failure|idiot|damn|hell)\b/i;
   const actionWords = requiredAction.toLowerCase().match(/\b(reply|text|add|log)\b/g) ?? [];
-  return text.length >= 20 && text.length <= 320 && !unsafe.test(text) && actionWords.some((word) => text.toLowerCase().includes(word));
+  const actionPreserved = actionWords.length === 0 || actionWords.some((word) => text.toLowerCase().includes(word));
+  return text.length >= 20 && text.length <= 320 && !unsafe.test(text) && actionPreserved;
 }
 
 function parseSse(text: string) {
