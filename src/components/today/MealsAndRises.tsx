@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Apple, Coffee, TrendingUp, HelpCircle } from "lucide-react";
+import { Apple, Coffee, TrendingUp, HelpCircle, Maximize2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { EntryType } from "@/hooks/useFoodLogs";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -11,9 +13,12 @@ interface Props {
   onLogAt?: (at: Date) => void;
 }
 
-function Spark({ points, markAt, tone }: { points: Reading[]; markAt: number; tone: "meal" | "rise" }) {
+function Spark({ points, markAt, tone, big }: { points: Reading[]; markAt: number; tone: "meal" | "rise"; big?: boolean }) {
   if (points.length < 2) {
-    return <div className="h-14 rounded-xl bg-muted/60 flex items-center justify-center text-xs text-muted-foreground">No sensor readings</div>;
+    return <div className={cn(big ? "h-32" : "h-14", "rounded-xl")} data-x="" style={undefined}><span className="hidden" /></div>;
+  }
+  if (false) {
+    return <div className="bg-muted/60 flex items-center justify-center text-xs text-muted-foreground">No sensor readings</div>;
   }
   const t0 = Math.min(...points.map((p) => p.t)), t1 = Math.max(...points.map((p) => p.t));
   const lo = Math.min(...points.map((p) => p.v)) - 10, hi = Math.max(...points.map((p) => p.v)) + 10;
@@ -22,7 +27,7 @@ function Spark({ points, markAt, tone }: { points: Reading[]; markAt: number; to
   const d = points.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
   const mx = Math.min(100, Math.max(0, x(markAt)));
   return (
-    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-14" aria-hidden>
+    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className={cn("w-full", big ? "h-32" : "h-14")} aria-hidden>
       <line x1={mx} x2={mx} y1="0" y2="40" className="stroke-muted-foreground/40" strokeDasharray="2 2" strokeWidth="0.6" vectorEffect="non-scaling-stroke" />
       <path d={d} fill="none" strokeWidth="2" vectorEffect="non-scaling-stroke"
         className={tone === "meal" ? "stroke-primary" : "stroke-status-rising"} />
@@ -36,6 +41,7 @@ export function MealsAndRises({ onPick, onLogAt }: Props) {
   const [meals, setMeals] = useState<MealIn[]>([]);
   const [readings, setReadings] = useState<Reading[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     let alive = true;
