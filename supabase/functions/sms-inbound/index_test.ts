@@ -65,7 +65,7 @@ Deno.test("saved reply reports the entry and the running carb total", () => {
     { type: "medication", label: "Metformin", carbs_grams: null, portion_size: null },
     0,
   );
-  assertEquals(med, "Saved: Metformin. Thanks for keeping up with it 💚");
+  assertEquals(med, "Saved: Metformin. Thanks for keeping up with it 💚\nSee your latest readings: https://calmglucose.com");
 });
 
 // End-to-end state machine over the pending-draft table, using the same
