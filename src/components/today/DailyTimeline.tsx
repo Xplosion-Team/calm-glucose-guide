@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Apple, Coffee, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +20,8 @@ export function DailyTimeline() {
   const [meals, setMeals] = useState<MealIn[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
+  const chips = useRef<HTMLDivElement>(null);
+  useEffect(() => { chips.current?.scrollTo({ left: chips.current.scrollWidth }); }, []);
 
   const t0 = day.getTime();
   const t1 = t0 + DAY;
@@ -50,7 +52,7 @@ export function DailyTimeline() {
   const rises = useMemo(() => unmatchedRises(readings, meals).filter((r) => r.start >= t0 && r.start < t1), [readings, meals, t0, t1]);
 
   // Chart geometry (viewBox units)
-  const W = 1000, H = 260, PAD_T = 30, PAD_B = 30;
+  const W = 1000, H = 480, PAD_T = 30, PAD_B = 30;
   const vals = dayReadings.map((r) => r.v);
   const lo = Math.min(70, ...vals) - 10, hi = Math.max(200, ...vals) + 10;
   const x = (t: number) => ((t - t0) / DAY) * W;
@@ -96,7 +98,7 @@ export function DailyTimeline() {
         </div>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" role="tablist" aria-label={es ? "Elegir día" : "Choose a day"}>
+      <div ref={chips} className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" role="tablist" aria-label={es ? "Elegir día" : "Choose a day"}>
         {days.map((d) => {
           const active = d.getTime() === t0;
           return (
@@ -114,12 +116,12 @@ export function DailyTimeline() {
         {loading ? (
           <div className="h-56 rounded-2xl bg-muted/50 animate-pulse" />
         ) : (
-          <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-56 sm:h-64" role="img"
+          <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img"
             aria-label={es ? "Glucosa del día con comidas" : "Glucose for the day with meals"}>
             {[0, 6, 12, 18, 24].map((h) => (
               <g key={h}>
                 <line x1={x(t0 + h * 3.6e6)} x2={x(t0 + h * 3.6e6)} y1={PAD_T} y2={H - PAD_B} className="stroke-border" strokeWidth="1" />
-                <text x={Math.min(W - 30, Math.max(4, x(t0 + h * 3.6e6) - 18))} y={H - 8} className="fill-muted-foreground" fontSize="20">
+                <text x={Math.min(W - 30, Math.max(4, x(t0 + h * 3.6e6) - 18))} y={H - 8} className="fill-muted-foreground" fontSize="26">
                   {h === 24 ? "" : new Date(t0 + h * 3.6e6).toLocaleTimeString(loc, { hour: "numeric" })}
                 </text>
               </g>
