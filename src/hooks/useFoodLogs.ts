@@ -75,6 +75,18 @@ export function useFoodLogs() {
 
   useEffect(() => {
     refresh();
+    const onFocus = () => { void refresh(); };
+    const onVisible = () => { if (document.visibilityState === "visible") void refresh(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, 30000);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(interval);
+    };
   }, [refresh]);
 
   const addLog = useCallback(

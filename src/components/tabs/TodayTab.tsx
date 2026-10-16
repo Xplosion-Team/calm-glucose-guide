@@ -66,7 +66,7 @@ const sourceIcon = (s: Source) => {
 
 export function TodayTab() {
   const { t, lang } = useI18n();
-  const { logs, addLog, updateLog, deleteLog } = useFoodLogs();
+  const { logs, loading: logsLoading, addLog, updateLog, deleteLog } = useFoodLogs();
   const [activeType, setActiveType] = useState<EntryType | null>(null);
   const [customText, setCustomText] = useState("");
   const [showJournal, setShowJournal] = useState(false);
@@ -180,7 +180,7 @@ export function TodayTab() {
         <p className="text-lg text-muted-foreground">{t("today.subtitle")}</p>
       </div>
 
-      <DailyInsightCard onLogMissed={() => setActiveType("food")} />
+      <DailyInsightCard logs={logs} logsLoading={logsLoading} onLogMissed={() => setActiveType("food")} />
 
       <SmartLogCard
         onConfirm={(r) => {
