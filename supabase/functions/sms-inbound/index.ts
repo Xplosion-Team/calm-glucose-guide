@@ -6,6 +6,7 @@
 //      estimates the label, carbs and portion, and a food_log row is inserted.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logSmsEvent, updateSmsEvent } from "../_shared/smsAudit.ts";
+import { downloadPhoto, parsePhotos, verifyTwilioSignature, type MealPhoto } from "./media.ts";
 import {
   classify,
   confirmPrompt,
@@ -36,27 +37,35 @@ async function analyzeEntry(
   supabase: ReturnType<typeof createClient>,
   text: string,
   type: "food" | "drink" | "medication",
+  photos: MealPhoto[] = [],
 ) {
   let label = text.slice(0, 60);
   let carbs: number | null = null;
   let portion: string | null = null;
 
-  if (type !== "medication") {
+  if (type !== "medication" || photos.length) {
     const aiResp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/analyze-food`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
       },
-      body: JSON.stringify({ text, lang: "en" }),
+      body: JSON.stringify({ text, images: photos, lang: "en" }),
     });
 
     if (aiResp.ok) {
       const j = await aiResp.json();
+      if (photos.length && (!j.foodName || j.foodName.toLowerCase() === "unknown")) {
+        throw new Error("I couldn't identify a meal in that photo. Please describe what you ate in words.");
+      }
       label = j.foodName || label;
       carbs = j.carbsGrams ?? null;
       portion = j.portionSize ?? null;
     } else {
+      if (photos.length) {
+        const failure = await aiResp.json().catch(() => ({}));
+        throw new Error(failure.error || "I couldn't analyze that photo. Please describe your meal in words.");
+      }
       console.error(`analyze-food failed [${aiResp.status}]: ${await aiResp.text()}`);
     }
   }
@@ -129,6 +138,9 @@ Deno.serve(async (req) => {
     // Twilio posts form-encoded; RingCentral webhooks post JSON.
     let from = "";
     let body = "";
+    let attachments: Array<{ url: string; mimeType: string }> = [];
+    let mediaError = "";
+    let messageSid = "";
     const contentType = req.headers.get("content-type") ?? "";
 
     if (contentType.includes("application/json")) {
@@ -140,9 +152,19 @@ Deno.serve(async (req) => {
       const form = await req.formData();
       from = (form.get("From") || "").toString();
       body = (form.get("Body") || "").toString().trim();
+      messageSid = String(form.get("MessageSid") ?? "");
+      if (String(form.get("NumMedia") ?? "0") !== "0") {
+        const token = Deno.env.get("TWILIO_AUTH_TOKEN");
+        const backendUrl = Deno.env.get("SUPABASE_URL");
+        if (!token || !backendUrl || !await verifyTwilioSignature(req, form, token, `${backendUrl}/functions/v1/sms-inbound`)) {
+          return new Response("Invalid webhook signature", { status: 403, headers: corsHeaders });
+        }
+        try { attachments = parsePhotos(form); }
+        catch (error) { mediaError = error instanceof Error ? error.message : "Please describe your meal in words."; }
+      }
     }
 
-    if (!from || !body) {
+    if (!from || (!body && !attachments.length && !mediaError)) {
       await logSmsEvent({
         direction: "inbound",
         phone: from || "unknown",
@@ -156,8 +178,8 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
     // Matches on the engagement record first, then on the sign-in phone number.
@@ -172,11 +194,11 @@ Deno.serve(async (req) => {
       userId: (userId as string) ?? null,
       direction: "inbound",
       phone: from,
-      body,
+      body: body || "[Meal photo]",
       provider: contentType.includes("application/json") ? "ringcentral" : "twilio",
       status: "received",
       purpose: "incoming text",
-      metadata: { matched_account: Boolean(userId) },
+      metadata: { matched_account: Boolean(userId), media_count: attachments.length, ...(messageSid ? { twilio_sid: messageSid } : {}) },
     });
 
     const audit = { inboundId, userId: (userId as string) ?? null, phone: from };
@@ -193,7 +215,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const intent = interpretReply(body);
+    const textIntent = interpretReply(body);
+    const intent = attachments.length && textIntent !== "stop" && textIntent !== "correction" ? "new_entry" : textIntent;
 
     // Simple opt-out courtesy.
     if (intent === "stop") {
@@ -206,6 +229,19 @@ Deno.serve(async (req) => {
         { purpose: "opt-out", outcome: "Check-in texts turned off" },
       );
     }
+
+    let photos: MealPhoto[] = [];
+    if (!mediaError && attachments.length) {
+      try {
+        const sid = Deno.env.get("TWILIO_ACCOUNT_SID");
+        const token = Deno.env.get("TWILIO_AUTH_TOKEN");
+        if (!sid || !token) throw new Error("Photo access is unavailable. Please describe your meal in words.");
+        for (const attachment of attachments) photos.push(await downloadPhoto(attachment, sid, token, messageSid));
+      } catch (error) { mediaError = error instanceof Error ? error.message : "The photo could not be opened."; }
+    }
+    if (mediaError) return await respondAndLog(audit, mediaError, {
+      purpose: "meal photo", outcome: "Photo not processed; no meal saved", status: "failed",
+    });
 
     // 0. Waiting on a confirmation for something they just texted in?
     const sincePending = new Date(Date.now() - 6 * 3.6e6).toISOString();
@@ -276,8 +312,12 @@ Deno.serve(async (req) => {
       if (!correction) return await respondAndLog(audit, "Text EDIT followed by the corrected meal details.", {
         purpose: "correction", outcome: "Correction details needed",
       });
-      const type = classify(correction);
-      const revised = await analyzeEntry(supabase, correction, type);
+      const type = photos.length ? "food" : classify(correction);
+      let revised;
+      try { revised = await analyzeEntry(supabase, correction, type, photos); }
+      catch (error) { return await respondAndLog(audit, error instanceof Error ? error.message : "Please describe your meal in words.", {
+        purpose: "meal photo", outcome: "Photo analysis failed; draft unchanged", status: "failed",
+      }); }
       await supabase
         .from("sms_pending_logs")
         .update({
@@ -347,8 +387,12 @@ Deno.serve(async (req) => {
       { purpose: "unmatched reply", outcome: "No matching pending meal or check-in" });
 
     // 2. Separate meal texts always get their own draft, even during a check-in.
-    const type = classify(body);
-    const draft = await analyzeEntry(supabase, body, type);
+    const type = photos.length ? "food" : classify(body);
+    let draft;
+    try { draft = await analyzeEntry(supabase, body, type, photos); }
+    catch (error) { return await respondAndLog(audit, error instanceof Error ? error.message : "Please describe your meal in words.", {
+      purpose: "meal photo", outcome: "Photo analysis failed; no meal saved", status: "failed",
+    }); }
 
     const { data: draftRow, error: draftError } = await supabase.from("sms_pending_logs").insert({
       user_id: userId,
@@ -356,7 +400,7 @@ Deno.serve(async (req) => {
       label: draft.label,
       carbs_grams: draft.carbs,
       portion_size: draft.portion,
-      original_text: body,
+      original_text: body || "Meal photo sent by text",
       status: "pending",
     }).select("id").maybeSingle();
 
@@ -375,7 +419,7 @@ Deno.serve(async (req) => {
         ? `Added another meal: ${draft.label}. Nothing saved yet.\nFirst meal waiting: ${confirmPrompt(pending.label, pending.carbs_grams, pending.portion_size)}`
         : confirmPrompt(draft.label, draft.carbs, draft.portion),
       {
-        purpose: "new entry",
+        purpose: photos.length ? "meal photo" : "new entry",
         outcome: `Read as "${draft.label}" — waiting for confirmation`,
         relatedTable: "sms_pending_logs",
         relatedId: (draftRow?.id as string) ?? null,

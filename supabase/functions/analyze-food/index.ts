@@ -13,9 +13,18 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const { imageBase64, text, lang = "en" } = await req.json();
+    const { imageBase64, images, text, lang = "en" } = await req.json();
+    const photos = images ?? (imageBase64 ? [{ imageBase64, mimeType: "image/jpeg" }] : []);
+    const supportedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!Array.isArray(photos) || photos.length > 4 ||
+      photos.some((p) => !p || typeof p.imageBase64 !== "string" || !p.imageBase64.length || p.imageBase64.length > 7 * 1024 * 1024 ||
+        !/^[A-Za-z0-9+/]+={0,2}$/.test(p.imageBase64) || !supportedTypes.includes(p.mimeType)) ||
+      (text !== undefined && (typeof text !== "string" || text.length > 4000))) {
+      return new Response(JSON.stringify({ error: "Provide up to four supported photos and a short meal description." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
-    if (!imageBase64 && !text) {
+    if (!photos.length && !text?.trim()) {
       return new Response(
         JSON.stringify({ error: "Provide imageBase64 or text" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -25,16 +34,16 @@ serve(async (req) => {
     const langLabel = lang === "es" ? "Spanish" : "English";
 
     const userContent: any[] = [];
-    if (imageBase64) {
+    for (const photo of photos) {
       userContent.push({
         type: "image_url",
-        image_url: { url: `data:image/jpeg;base64,${imageBase64}` },
+        image_url: { url: `data:${photo.mimeType};base64,${photo.imageBase64}` },
       });
     }
     userContent.push({
       type: "text",
       text: text
-        ? `The user described what they ate: "${text}". Identify it, estimate carbs and portion size.`
+        ? `The user described what they ate: "${text}". Use any attached photos together with this description to identify the whole meal, estimate total carbs and portion size. Multiple photos may show the same meal; do not count repeated views twice.`
         : "What food is this? Estimate the carbs and portion size.",
     });
 
@@ -78,18 +87,10 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "Failed to analyze food" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const failure = await response.json().catch(() => ({}));
+      const safeMessage = failure.message || failure.error?.message || "Photo analysis is unavailable. Please describe your meal in words.";
+      return new Response(JSON.stringify({ error: safeMessage }),
+        { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const data = await response.json();
@@ -101,6 +102,12 @@ serve(async (req) => {
     }
 
     const result = JSON.parse(toolCall.function.arguments);
+    if (typeof result.foodName !== "string" || !result.foodName.trim() || result.foodName.length > 300 ||
+      typeof result.carbsGrams !== "number" || !Number.isFinite(result.carbsGrams) || result.carbsGrams < 0 ||
+      !["small", "medium", "large"].includes(result.portionSize) || !["meal", "snack", "drink"].includes(result.category)) {
+      return new Response(JSON.stringify({ error: "Could not identify the meal reliably. Please describe what you ate." }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
