@@ -1003,6 +1003,8 @@ export type Database = {
           carbs_grams: number | null
           confirmed_at: string | null
           created_at: string
+          eaten_at: string | null
+          eaten_at_source: string | null
           id: string
           label: string
           original_text: string
@@ -1016,6 +1018,8 @@ export type Database = {
           carbs_grams?: number | null
           confirmed_at?: string | null
           created_at?: string
+          eaten_at?: string | null
+          eaten_at_source?: string | null
           id?: string
           label: string
           original_text: string
@@ -1029,6 +1033,8 @@ export type Database = {
           carbs_grams?: number | null
           confirmed_at?: string | null
           created_at?: string
+          eaten_at?: string | null
+          eaten_at_source?: string | null
           id?: string
           label?: string
           original_text?: string
