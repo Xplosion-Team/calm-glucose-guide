@@ -6,6 +6,7 @@
 //      estimates the label, carbs and portion, and a food_log row is inserted.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logSmsEvent, updateSmsEvent } from "../_shared/smsAudit.ts";
+import { isNoMealReply, matchTimedReply } from "../_shared/riseDetect.ts";
 import { downloadPhoto, parsePhotos, photoReplyIntent, verifyTwilioSignature, type MealPhoto } from "./media.ts";
 import {
   classify,
@@ -285,6 +286,31 @@ Deno.serve(async (req) => {
         { purpose: "meal time", outcome: `Eating time set for "${pending.label}"`, relatedTable: "sms_pending_logs", relatedId: pending.id as string });
     }
 
+    // Replies to a "your glucose rose — did you eat?" text.
+    let riseMatch: { id: string; start: number } | null = null;
+    let entryText = body;
+    if (!pending) {
+      const { data: sentRises } = await supabase.from("spike_events")
+        .select("id, rise_start_at, sms_sent_at").eq("user_id", userId).eq("kind", "unlogged").eq("status", "sent")
+        .gte("sms_sent_at", new Date(now.getTime() - 12 * 3.6e6).toISOString())
+        .order("sms_sent_at", { ascending: false }).order("rise_start_at", { ascending: false });
+      const rises = (sentRises ?? []) as Array<{ id: string; rise_start_at: string; sms_sent_at: string }>;
+      if (rises.length) {
+        const latestBatch = rises.filter((r) => r.sms_sent_at === rises[0].sms_sent_at);
+        if (!photos.length && isNoMealReply(body)) {
+          await supabase.from("spike_events").update({ status: "no_meal", user_response: "no_meal", responded_at: now.toISOString() })
+            .in("id", latestBatch.map((r) => r.id));
+          return await respondAndLog(audit, "Thanks for letting me know — I won't ask about that one again. 💚", {
+            purpose: "rise reply", outcome: "Member said they didn't eat", relatedTable: "spike_events", relatedId: latestBatch[0].id,
+          });
+        }
+        const timed = photos.length ? null : matchTimedReply(body, rises.map((r) => ({ id: r.id, start: Date.parse(r.rise_start_at) })),
+          (mins) => atLocalMinutes(mins, now, tz).getTime());
+        if (timed) { riseMatch = { id: timed.riseId, start: timed.riseStart }; entryText = timed.food; }
+        else if (intent === "new_entry") riseMatch = { id: latestBatch[0].id, start: Date.parse(latestBatch[0].rise_start_at) };
+      }
+    }
+
     if (pending && intent !== "new_entry" && intent !== "checkin") {
       if (intent === "confirm") {
         const { data: savedLog, error: insertError } = await supabase.from("food_logs").insert({
@@ -407,17 +433,18 @@ Deno.serve(async (req) => {
       { purpose: "unmatched reply", outcome: "No matching pending meal or check-in" });
 
     // 2. Separate meal texts always get their own draft, even during a check-in.
-    const type = photos.length ? "food" : classify(body);
+    const type = photos.length ? "food" : classify(entryText);
     let draft;
-    try { draft = await analyzeEntry(supabase, body, type, photos); }
+    try { draft = await analyzeEntry(supabase, entryText, type, photos); }
     catch (error) { return await respondAndLog(audit, error instanceof Error ? error.message : "Please describe your meal in words.", {
       purpose: "meal photo", outcome: "Photo analysis failed; no meal saved", status: "failed",
     }); }
 
     // When was it eaten? Stated time > glucose rise > typical meal window > time texted.
     let eaten: EatenTime = { at: now, source: "texted" };
-    const stated = parseEatenTime(body, now, tz);
-    if (stated) eaten = { at: stated, source: "stated" };
+    const stated = riseMatch ? null : parseEatenTime(body, now, tz);
+    if (riseMatch) eaten = { at: new Date(riseMatch.start), source: "glucose_rise" };
+    else if (stated) eaten = { at: stated, source: "stated" };
     else if (type !== "medication") {
       const win = mealWindow(body);
       const from = new Date(now.getTime() - 6 * 3.6e6);
@@ -437,7 +464,7 @@ Deno.serve(async (req) => {
       label: draft.label,
       carbs_grams: draft.carbs,
       portion_size: draft.portion,
-      original_text: body || "Meal photo sent by text",
+      original_text: entryText || "Meal photo sent by text",
       status: "pending",
     }).select("id").maybeSingle();
 
@@ -448,6 +475,12 @@ Deno.serve(async (req) => {
         "I couldn't save that just now. Please try again in a moment.",
         { purpose: "new entry", outcome: `Draft failed: ${draftError.message}`, status: "failed" },
       );
+    }
+
+    if (riseMatch && draftRow?.id) {
+      await supabase.from("spike_events").update({
+        status: "answered", user_response: "logged", responded_at: now.toISOString(), pending_log_id: draftRow.id,
+      }).eq("id", riseMatch.id);
     }
 
     return await respondAndLog(

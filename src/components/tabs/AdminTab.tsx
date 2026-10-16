@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, CheckCircle2, Clock, XCircle, MessageSquare } from "lucide-react";
+import { RefreshCw, CheckCircle2, Clock, XCircle, MessageSquare, TrendingUp, Utensils } from "lucide-react";
 import { useSmsApprovalStats } from "@/hooks/useSmsApprovalStats";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,14 @@ function Stat({
 export function AdminTab() {
   const [days, setDays] = useState(30);
   const { rows, loading, error, refresh } = useSmsApprovalStats(days);
+
+  const [rise, setRise] = useState({ texted: 0, answered: 0, saved: 0 });
+  useEffect(() => {
+    supabase.rpc("admin_rise_text_stats", { _days: days }).then(({ data }) => {
+      const r = (data ?? []) as Array<{ texted: number; answered: number; meals_saved: number }>;
+      setRise(r.reduce((a, x) => ({ texted: a.texted + Number(x.texted), answered: a.answered + Number(x.answered), saved: a.saved + Number(x.meals_saved) }), { texted: 0, answered: 0, saved: 0 }));
+    });
+  }, [days]);
 
   const totals = rows.reduce(
     (acc, r) => ({
@@ -86,6 +95,15 @@ export function AdminTab() {
               <Stat icon={Clock} value={totals.pending} label="Awaiting reply" />
               <Stat icon={XCircle} value={totals.discarded} label="Discarded" />
               <Stat icon={MessageSquare} value={totals.inbound} label="Texts in" />
+            </div>
+          </Card>
+
+          <Card className="p-4 space-y-2">
+            <p className="text-sm font-medium">Blood sugar rises with no meal logged</p>
+            <div className="flex gap-2">
+              <Stat icon={TrendingUp} value={rise.texted} label="Rises texted" tone="text-status-rising" />
+              <Stat icon={MessageSquare} value={rise.answered} label="Answered" />
+              <Stat icon={Utensils} value={rise.saved} label="Meals saved" tone="text-primary" />
             </div>
           </Card>
 

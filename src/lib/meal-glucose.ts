@@ -28,8 +28,8 @@ export function mealCurve(meal: MealIn, readings: Reading[]): MealWithCurve {
   return { ...meal, points, baseline, peak: top.v, rise: Math.round(top.v - baseline), peakAt: top.t };
 }
 
-// Rises of >= minRise within 2 h of a low point, with no meal from 60 min before to 90 min after.
-export function unmatchedRises(readings: Reading[], meals: MealIn[], minRise = 30): UnmatchedRise[] {
+// Rises of >= minRise (15, same as the rise texts) within 2 h of a low point, with no meal from 60 min before to 90 min after.
+export function unmatchedRises(readings: Reading[], meals: MealIn[], minRise = 15): UnmatchedRise[] {
   const pts = [...readings].sort((a, b) => a.t - b.t);
   const out: UnmatchedRise[] = [];
   let i = 0;

@@ -10,7 +10,7 @@ export interface PersonaPrefs {
 }
 
 interface NudgeFacts {
-  purpose: "post_meal" | "inactive" | "test";
+  purpose: "post_meal" | "inactive" | "test" | "rise";
   requiredAction: string;
   context: string;
 }
