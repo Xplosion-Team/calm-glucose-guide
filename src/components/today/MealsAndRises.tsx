@@ -70,22 +70,11 @@ export function MealsAndRises({ onPick, onLogAt }: Props) {
     return `${day} · ${d.toLocaleTimeString(es ? "es-ES" : "en-US", { hour: "numeric", minute: "2-digit" })}`;
   };
 
-  const card = "shrink-0 w-60 snap-start text-left rounded-2xl border-2 bg-card p-3 space-y-2 touch-target transition-all";
-
-  return (
-    <section className="space-y-2" aria-labelledby="meals-rises-heading">
-      <div className="px-1">
-        <h3 id="meals-rises-heading" className="text-base font-semibold text-foreground">
-          {es ? "Comidas y subidas de glucosa" : "Recent meals & glucose rises"}
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          {es ? "Cómo cambió tu glucosa después de cada comida." : "How your glucose moved after each meal."}
-        </p>
-      </div>
-
-      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x">
+  const renderCards = (big: boolean) => {
+    const card = cn("text-left rounded-2xl border-2 bg-card p-3 space-y-2 touch-target transition-all", big ? "w-full p-4" : "shrink-0 w-60 snap-start");
+    return (<>
         {rises.map((r) => (
-          <button key={`rise-${r.start}`} onClick={() => onLogAt?.(new Date(r.start))}
+          <button key={`rise-${r.start}`} onClick={() => { setExpanded(false); onLogAt?.(new Date(r.start)); }}
             className={cn(card, "border-status-rising/50 bg-status-rising-bg/40 hover:border-status-rising")}>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-status-rising-bg text-status-rising flex items-center justify-center">
@@ -94,7 +83,7 @@ export function MealsAndRises({ onPick, onLogAt }: Props) {
               <p className="font-medium text-foreground text-sm">{es ? "¿Comiste algo?" : "Did you eat something?"}</p>
             </div>
             <p className="text-xs text-muted-foreground">{when(r.start)}</p>
-            <Spark points={r.points} markAt={r.start} tone="rise" />
+            <Spark points={r.points} markAt={r.start} tone="rise" big={big} />
             <p className="text-sm text-status-rising font-medium flex items-center gap-1">
               <TrendingUp className="w-4 h-4" /> {es ? "Subió" : "Rose"} ~{Math.round(r.peak - r.startValue)} {es ? "sin comida anotada" : "with no meal logged"}
             </p>
@@ -105,7 +94,7 @@ export function MealsAndRises({ onPick, onLogAt }: Props) {
         {curves.map((m) => {
           const Icon = m.type === "drink" ? Coffee : Apple;
           return (
-            <button key={m.id} onClick={() => onPick?.({ type: m.type as EntryType, label: m.label, carbs_grams: m.carbs })}
+            <button key={m.id} onClick={() => { setExpanded(false); onPick?.({ type: m.type as EntryType, label: m.label, carbs_grams: m.carbs }); }}
               className={cn(card, "border-border hover:border-primary/40")}>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-status-stable-bg text-status-stable flex items-center justify-center shrink-0">
@@ -114,7 +103,7 @@ export function MealsAndRises({ onPick, onLogAt }: Props) {
                 <p className="font-medium text-foreground text-sm truncate">{m.label}</p>
               </div>
               <p className="text-xs text-muted-foreground">{when(m.at)}{m.carbs != null ? ` · ~${m.carbs}g ${es ? "carbos" : "carbs"}` : ""}</p>
-              <Spark points={m.points} markAt={m.at} tone="meal" />
+              <Spark points={m.points} markAt={m.at} tone="meal" big={big} />
               <p className="text-sm text-foreground">
                 {m.rise == null
                   ? <span className="text-muted-foreground">{es ? "Sin lecturas para comparar" : "No readings to compare"}</span>
@@ -125,7 +114,36 @@ export function MealsAndRises({ onPick, onLogAt }: Props) {
             </button>
           );
         })}
+    </>);
+  };
+
+  return (
+    <section className="space-y-2" aria-labelledby="meals-rises-heading">
+      <div className="px-1 flex items-start justify-between gap-2">
+        <div>
+        <h3 id="meals-rises-heading" className="text-base font-semibold text-foreground">
+          {es ? "Comidas y subidas de glucosa" : "Recent meals & glucose rises"}
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          {es ? "Cómo cambió tu glucosa después de cada comida." : "How your glucose moved after each meal."}
+        </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setExpanded(true)} className="gap-1 shrink-0">
+          <Maximize2 className="w-4 h-4" /> {es ? "Ver grande" : "Full view"}
+        </Button>
       </div>
+
+      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x">{renderCards(false)}</div>
+
+      <Dialog open={expanded} onOpenChange={setExpanded}>
+        <DialogContent className="max-w-3xl w-[calc(100vw-1rem)] h-[92dvh] flex flex-col gap-3 p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl">{es ? "Comidas y subidas de glucosa" : "Recent meals & glucose rises"}</DialogTitle>
+            <DialogDescription>{es ? "Últimos 7 días. La línea punteada marca cuándo comiste." : "Last 7 days. The dotted line marks when you ate."}</DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto grid gap-3 sm:grid-cols-2 content-start pb-[env(safe-area-inset-bottom)]">{renderCards(true)}</div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
