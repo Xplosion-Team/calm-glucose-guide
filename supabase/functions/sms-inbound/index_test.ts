@@ -206,3 +206,22 @@ Deno.test("food messages route as new meals rather than check-in notes or confir
   assertEquals(interpretReply("I feel fine"), "checkin");
   assertEquals(interpretReply("EDIT two slices of toast"), "correction");
 });
+
+import { parseEatenTime, isTimeReply, findGlucoseRise, formatLocalTime } from "./logic.ts";
+const NOW = new Date("2026-10-16T20:00:00Z"); // 3:00 PM Chicago
+Deno.test("stated eating times", () => {
+  assertEquals(formatLocalTime(parseEatenTime("salmon at 12:30pm", NOW, "America/Chicago")!, "America/Chicago"), "12:30 PM");
+  assertEquals(parseEatenTime("pasta 2 hours ago", NOW, "America/Chicago")!.toISOString(), "2026-10-16T18:00:00.000Z");
+  assertEquals(parseEatenTime("chicken salad", NOW, "America/Chicago"), null);
+});
+Deno.test("time-only replies", () => {
+  assertEquals(isTimeReply("1pm", NOW, "America/Chicago"), true);
+  assertEquals(isTimeReply("about 2 hours ago", NOW, "America/Chicago"), true);
+  assertEquals(isTimeReply("rice and beans at 1pm", NOW, "America/Chicago"), false);
+});
+Deno.test("glucose rise marks meal start", () => {
+  const r = [["17:00",110],["17:30",105],["17:45",100],["18:15",135],["18:45",160],["19:30",120]]
+    .map(([t,v]) => ({ ts: `2026-10-16T${t}:00Z`, mg_dl: v as number }));
+  assertEquals(findGlucoseRise(r)!.toISOString(), "2026-10-16T17:45:00.000Z");
+  assertEquals(findGlucoseRise(r.map((x) => ({ ...x, mg_dl: 110 }))), null);
+});

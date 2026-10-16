@@ -8,6 +8,13 @@
       "when": 1791497791378,
       "tag": "0000_add_nudge_persona_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792181537412,
+      "tag": "0001_sms_pending_eaten_at",
+      "breakpoints": true
     }
   ]
 }

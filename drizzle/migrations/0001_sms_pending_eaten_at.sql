@@ -1,0 +1,1 @@
+ALTER TABLE public.sms_pending_logs ADD COLUMN IF NOT EXISTS eaten_at timestamptz, ADD COLUMN IF NOT EXISTS eaten_at_source text CHECK (eaten_at_source IN ('stated','glucose_rise','meal_window','texted'));
