@@ -8,7 +8,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 import { useFoodLogs, type EntryType, type Source, type FoodLog } from "@/hooks/useFoodLogs";
 import { SmartLogCard } from "@/components/today/SmartLogCard";
-import { RecentMeals } from "@/components/today/RecentMeals";
+import { MealsAndRises } from "@/components/today/MealsAndRises";
 import { FavoriteMeals } from "@/components/today/FavoriteMeals";
 import { JournalView } from "@/components/journal/JournalView";
 import { SmsTimeline } from "@/components/journal/SmsTimeline";
@@ -197,7 +197,10 @@ export function TodayTab() {
       />
 
 
-      <RecentMeals onPick={(d) => openDraft(d, "manual")} />
+      <MealsAndRises
+        onPick={(d) => openDraft(d, "manual")}
+        onLogAt={(at) => openDraft({ type: "food", label: "", logged_at: at.toISOString() }, "manual")}
+      />
       <FavoriteMeals onPick={(d) => openDraft(d, "manual")} />
 
       <div className="flex justify-end">
