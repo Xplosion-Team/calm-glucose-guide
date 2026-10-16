@@ -44,7 +44,7 @@ Deno.test("photo download authenticates Twilio but never forwards credentials to
   const original = globalThis.fetch;
   const calls: Array<{ url: string; auth: string | null }> = [];
   globalThis.fetch = async (input, init) => {
-    calls.push({ url: String(input), auth: new Headers(init?.headers).get("authorization") });
+    calls.push({ url: String(input), auth: new Headers((init as { headers?: HeadersInit } | undefined)?.headers).get("authorization") });
     return calls.length === 1 ? new Response(null, { status: 302, headers: { location: "https://mms.twiliocdn.com/photo" } })
       : new Response(new Uint8Array([137, 80, 78, 71]), { headers: { "content-type": "image/png" } });
   };
