@@ -38,17 +38,22 @@ export function MealsAndRises({ onPick, onLogAt }: Props) {
   const [meals, setMeals] = useState<MealIn[]>([]);
   const [readings, setReadings] = useState<Reading[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [riseStatus, setRiseStatus] = useState<Array<{ start: number; status: string; sentAt: number | null }>>([]);
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       const since = new Date(Date.now() - 7 * 864e5).toISOString();
-      const [{ data: logs }, { data: cgm }] = await Promise.all([
+      const [{ data: logs }, { data: cgm }, { data: spikes }] = await Promise.all([
         supabase.from("food_logs").select("id,label,type,carbs_grams,logged_at")
           .in("type", ["food", "drink"]).gte("logged_at", since).order("logged_at", { ascending: false }).limit(20),
         supabase.from("cgm_readings").select("ts,mg_dl").gte("ts", since).order("ts").limit(3000),
+        supabase.from("spike_events").select("rise_start_at,status,sms_sent_at").eq("kind", "unlogged").gte("rise_start_at", since),
       ]);
+      setRiseStatus((spikes ?? []).filter((x) => x.rise_start_at).map((x) => ({
+        start: Date.parse(x.rise_start_at as string), status: x.status ?? "queued", sentAt: x.sms_sent_at ? Date.parse(x.sms_sent_at) : null,
+      })));
       if (!alive) return;
       setMeals((logs ?? []).map((l) => ({ id: l.id, label: l.label, type: l.type, carbs: l.carbs_grams, at: Date.parse(l.logged_at) })));
       setReadings((cgm ?? []).map((c) => ({ t: Date.parse(c.ts), v: Number(c.mg_dl) })));
@@ -58,7 +63,11 @@ export function MealsAndRises({ onPick, onLogAt }: Props) {
   }, []);
 
   const curves = useMemo(() => meals.map((m) => mealCurve(m, readings)), [meals, readings]);
-  const rises = useMemo(() => unmatchedRises(readings, meals).slice(0, 5), [readings, meals]);
+  const rises = useMemo(() => unmatchedRises(readings, meals)
+    .map((r) => ({ ...r, server: riseStatus.find((x) => Math.abs(x.start - r.start) < 30 * 60000) }))
+    .filter((r) => !r.server || !["no_meal", "answered", "cancelled"].includes(r.server.status))
+    .slice(0, 5), [readings, meals, riseStatus]);
+  const clock = (t: number) => new Date(t).toLocaleTimeString(es ? "es-ES" : "en-US", { hour: "numeric", minute: "2-digit" });
 
   if (!loaded || (!curves.length && !rises.length)) return null;
 
@@ -87,6 +96,9 @@ export function MealsAndRises({ onPick, onLogAt }: Props) {
             <p className="text-sm text-status-rising font-medium flex items-center gap-1">
               <TrendingUp className="w-4 h-4" /> {es ? "Subió" : "Rose"} ~{Math.round(r.peak - r.startValue)} {es ? "sin comida anotada" : "with no meal logged"}
             </p>
+            {r.server?.sentAt && (
+              <p className="text-xs text-muted-foreground">{es ? `Mensaje enviado ${clock(r.server.sentAt)}` : `Texted ${clock(r.server.sentAt)}`}</p>
+            )}
             <p className="text-xs text-primary font-medium">{es ? "Toca para anotar una comida" : "Tap to log a meal for this time"}</p>
           </button>
         ))}
