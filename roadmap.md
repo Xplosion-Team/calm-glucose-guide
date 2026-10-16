@@ -1,7 +1,8 @@
 # Roadmap
 
-- [ ] Process photo texts with the in-app meal analyzer, keeping YES/NO review and separate drafts.
-- [ ] Test photo handling and verify a real photo from Kehlin's linked number (awaits an incoming photo).
+- [x] Process photo texts with the in-app meal analyzer, keeping YES/NO review and separate drafts.
+- [x] Pass 17 messaging/photo tests, verify live sample-photo analysis, and reject unsigned photo webhooks.
+- [ ] Verify a real photo from Kehlin's linked number; blocked until a meal photo arrives at 833-700-8650.
 
 - [x] Preserve multiple meal texts, test confirmation and correction routing, and deploy.
 
