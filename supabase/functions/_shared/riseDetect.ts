@@ -5,16 +5,16 @@ export interface Reading { t: number; v: number }
 export interface Rise { start: number; startValue: number; peak: number; peakAt: number }
 
 const MIN = 60000;
-export const MIN_RISE = 15;           // mg/dL within 2 h of a low point
+export const MIN_RISE = 20;           // mg/dL within 2 h of a low point
 export const WAIT_MIN = 30;           // wait after rise start before texting
 export const REALTIME_MAX_MIN = 180;  // older rises go into the evening summary
 export const DAILY_CAP = 3;
 export const SPACING_MIN = 120;
 export const DIGEST_HOUR = 19;
 
-// A meal from 90 min before to 60 min after the rise start explains it.
+// A meal from 90 min before to 120 min after the rise start explains it.
 export function mealCovers(mealAt: number, riseStart: number) {
-  return mealAt >= riseStart - 90 * MIN && mealAt <= riseStart + 60 * MIN;
+  return mealAt >= riseStart - 90 * MIN && mealAt <= riseStart + 120 * MIN;
 }
 
 export function detectRises(readings: Reading[], mealTimes: number[], minRise = MIN_RISE): Rise[] {

@@ -28,8 +28,8 @@ export function mealCurve(meal: MealIn, readings: Reading[]): MealWithCurve {
   return { ...meal, points, baseline, peak: top.v, rise: Math.round(top.v - baseline), peakAt: top.t };
 }
 
-// Rises of >= minRise (15, same as the rise texts) within 2 h of a low point, with no meal from 60 min before to 90 min after.
-export function unmatchedRises(readings: Reading[], meals: MealIn[], minRise = 15): UnmatchedRise[] {
+// Rises of >= minRise (20, same as the rise texts) within 2 h of a low point, with no meal from 90 min before to 120 min after.
+export function unmatchedRises(readings: Reading[], meals: MealIn[], minRise = 20): UnmatchedRise[] {
   const pts = [...readings].sort((a, b) => a.t - b.t);
   const out: UnmatchedRise[] = [];
   let i = 0;
@@ -39,7 +39,7 @@ export function unmatchedRises(readings: Reading[], meals: MealIn[], minRise = 1
     const top = win.reduce<Reading | null>((a, b) => (!a || b.v > a.v ? b : a), null);
     const lower = win.find((p) => p.t < (top?.t ?? 0) && p.v < trough.v);
     if (top && !lower && top.v - trough.v >= minRise) {
-      const explained = meals.some((m) => m.at >= trough.t - 90 * MIN && m.at <= trough.t + 60 * MIN);
+      const explained = meals.some((m) => m.at >= trough.t - 90 * MIN && m.at <= trough.t + 120 * MIN);
       if (!explained) {
         out.push({
           start: trough.t, startValue: trough.v, peak: top.v, peakAt: top.t,
