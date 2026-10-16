@@ -173,6 +173,11 @@ async function processUnloggedRises(
     for (const id of plan.toDigest) {
       const x = rows.find((y) => y.id === id)!;
       const d = localDate(tz, new Date(x.rise_start_at));
+      // Overnight rises (during quiet hours) are shown in the app but not texted.
+      if (quietNow(prefs?.quiet_start_hour ?? 21, prefs?.quiet_end_hour ?? 8, localHour(tz, new Date(x.rise_start_at)))) {
+        await supabase.from("spike_events").update({ status: "expired" }).eq("id", id);
+        x.status = "expired"; continue;
+      }
       await supabase.from("spike_events").update({ status: "digest", digest_date: d }).eq("id", id);
       x.status = "digest"; x.digest_date = d;
     }
