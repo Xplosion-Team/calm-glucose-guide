@@ -225,3 +225,11 @@ Deno.test("glucose rise marks meal start", () => {
   assertEquals(findGlucoseRise(r)!.toISOString(), "2026-10-16T17:45:00.000Z");
   assertEquals(findGlucoseRise(r.map((x) => ({ ...x, mg_dl: 110 }))), null);
 });
+
+import { interpretReply as ir2, savedReplyText as srt2, readingsLinkText as rlt } from "./logic.ts";
+Deno.test("LINK/READINGS texts get the app link; saved replies include it", () => {
+  for (const t of ["link", "READINGS", "my readings", "app"]) assertEquals(ir2(t), "readings");
+  assertEquals(ir2("salmon and rice"), "new_entry");
+  assertEquals(rlt().includes("https://calmglucose.com"), true);
+  assertEquals(srt2({ type: "food", label: "Salmon", carbs_grams: 40, portion_size: null }, 40).includes("https://calmglucose.com"), true);
+});

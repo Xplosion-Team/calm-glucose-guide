@@ -189,7 +189,7 @@ async function processUnloggedRises(
         context: `Your glucose started rising around ${localTime(tz, new Date(x.rise_start_at))} and I don't see a meal logged then.`,
         requiredAction: "Did you eat something? Text me what you had and I'll log it, or reply NO if you didn't eat.",
       }, prefs ?? {}, signal);
-      const res = await sendSms(phone, body, (prefs?.sms_provider as SmsProvider) ?? "twilio", {
+      const res = await sendSms(phone, `${body}\nSee your readings: https://calmglucose.com`, (prefs?.sms_provider as SmsProvider) ?? "twilio", {
         userId, purpose: "rise with no meal", relatedTable: "spike_events", relatedId: x.id,
       });
       if (res.ok) {
@@ -209,7 +209,7 @@ async function processUnloggedRises(
         context: `I noticed ${digest.length === 1 ? "a rise" : `${digest.length} rises`} today without a meal logged — around ${list}.`,
         requiredAction: `Text me what you ate with the time, like "${times[0]} salmon and rice", or reply NO if you didn't eat.`,
       }, prefs ?? {}, signal);
-      const res = await sendSms(phone, body, (prefs?.sms_provider as SmsProvider) ?? "twilio", {
+      const res = await sendSms(phone, `${body}\nSee your readings: https://calmglucose.com`, (prefs?.sms_provider as SmsProvider) ?? "twilio", {
         userId, purpose: "rise summary", relatedTable: "spike_events", relatedId: digest[0].id,
       });
       if (res.ok) {

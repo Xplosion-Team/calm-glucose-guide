@@ -14,6 +14,7 @@ import {
   interpretReply,
   phoneVariants,
   savedReplyText,
+  readingsLinkText,
   sumCarbs,
   eatenLine,
   findGlucoseRise,
