@@ -71,7 +71,7 @@ export function MealsAndRises({ onPick, onLogAt }: Props) {
   };
 
   const renderCards = (big: boolean) => {
-    const card = cn("text-left rounded-2xl border-2 bg-card p-3 space-y-2 touch-target transition-all", big ? "w-full p-4" : "shrink-0 w-60 snap-start");
+    const card = cn("text-left rounded-2xl border-2 bg-card p-3 space-y-2 touch-target transition-all", big ? "w-full p-4 flex flex-col overflow-hidden" : "shrink-0 w-60 snap-start");
     return (<>
         {rises.map((r) => (
           <button key={`rise-${r.start}`} onClick={() => { setExpanded(false); onLogAt?.(new Date(r.start)); }}
@@ -141,7 +141,7 @@ export function MealsAndRises({ onPick, onLogAt }: Props) {
             <DialogTitle className="text-xl">{es ? "Comidas y subidas de glucosa" : "Recent meals & glucose rises"}</DialogTitle>
             <DialogDescription>{es ? "Últimos 7 días. La línea punteada marca cuándo comiste." : "Last 7 days. The dotted line marks when you ate."}</DialogDescription>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto grid gap-3 sm:grid-cols-2 content-start pb-[env(safe-area-inset-bottom)]">{renderCards(true)}</div>
+          <div className="flex-1 min-h-0 overflow-y-auto pb-[env(safe-area-inset-bottom)]"><div className="grid gap-3 sm:grid-cols-2">{renderCards(true)}</div></div>
         </DialogContent>
       </Dialog>
     </section>
