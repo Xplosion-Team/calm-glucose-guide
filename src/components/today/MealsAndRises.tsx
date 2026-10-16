@@ -15,10 +15,7 @@ interface Props {
 
 function Spark({ points, markAt, tone, big }: { points: Reading[]; markAt: number; tone: "meal" | "rise"; big?: boolean }) {
   if (points.length < 2) {
-    return <div className={cn(big ? "h-32" : "h-14", "rounded-xl")} data-x="" style={undefined}><span className="hidden" /></div>;
-  }
-  if (false) {
-    return <div className="bg-muted/60 flex items-center justify-center text-xs text-muted-foreground">No sensor readings</div>;
+    return <div className={cn(big ? "h-32" : "h-14", "rounded-xl bg-muted/60 flex items-center justify-center text-xs text-muted-foreground")}>No sensor readings</div>;
   }
   const t0 = Math.min(...points.map((p) => p.t)), t1 = Math.max(...points.map((p) => p.t));
   const lo = Math.min(...points.map((p) => p.v)) - 10, hi = Math.max(...points.map((p) => p.v)) + 10;
