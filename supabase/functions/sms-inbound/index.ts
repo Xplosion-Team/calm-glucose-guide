@@ -215,11 +215,22 @@ Deno.serve(async (req) => {
       .eq("user_id", userId)
       .eq("status", "pending")
       .gte("created_at", sincePending)
-      .order("created_at", { ascending: false })
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
       .limit(1)
       .maybeSingle();
 
-    if (pending) {
+    async function nextDraftPrompt() {
+      const { data: next } = await supabase.from("sms_pending_logs")
+        .select("label, carbs_grams, portion_size")
+        .eq("user_id", userId).eq("status", "pending")
+        .gte("created_at", sincePending)
+        .order("created_at", { ascending: true }).order("id", { ascending: true })
+        .limit(1).maybeSingle();
+      return next ? `\nNext meal waiting: ${confirmPrompt(next.label, next.carbs_grams, next.portion_size)}` : "";
+    }
+
+    if (pending && intent !== "new_entry" && intent !== "checkin") {
       if (intent === "confirm") {
         const { data: savedLog, error: insertError } = await supabase.from("food_logs").insert({
           user_id: userId,
@@ -242,7 +253,7 @@ Deno.serve(async (req) => {
           .from("sms_pending_logs")
           .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
           .eq("id", pending.id);
-        return await respondAndLog(audit, await savedReply(supabase, userId as string, pending), {
+        return await respondAndLog(audit, (await savedReply(supabase, userId as string, pending)) + (await nextDraftPrompt()), {
           purpose: "confirmation",
           outcome: `Saved "${pending.label}" to the journal`,
           relatedTable: "food_logs",
@@ -255,14 +266,18 @@ Deno.serve(async (req) => {
         await supabase.from("sms_pending_logs").update({ status: "discarded" }).eq("id", pending.id);
         return await respondAndLog(
           audit,
-          "No problem — I didn't save it. Text me again whenever you're ready.",
+          "No problem — I didn't save it." + (await nextDraftPrompt()),
           { purpose: "confirmation", outcome: "Entry discarded" },
         );
       }
 
-      // Anything else is treated as an edit to the entry we're holding.
-      const type = classify(body);
-      const revised = await analyzeEntry(supabase, body, type);
+      // Only an explicit correction edits the oldest waiting meal.
+      const correction = body.replace(/^(edit|correction|correct to|actually|instead|it was|make that|change to)\b[:\s]*/i, "").trim();
+      if (!correction) return await respondAndLog(audit, "Text EDIT followed by the corrected meal details.", {
+        purpose: "correction", outcome: "Correction details needed",
+      });
+      const type = classify(correction);
+      const revised = await analyzeEntry(supabase, correction, type);
       await supabase
         .from("sms_pending_logs")
         .update({
@@ -270,7 +285,7 @@ Deno.serve(async (req) => {
           label: revised.label,
           carbs_grams: revised.carbs,
           portion_size: revised.portion,
-          original_text: body,
+          original_text: correction,
         })
         .eq("id", pending.id);
       return await respondAndLog(
@@ -299,7 +314,7 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    if (reminder) {
+    if (reminder && intent === "checkin") {
       const { data: log } = await supabase
         .from("food_logs")
         .select("notes")
@@ -327,7 +342,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Otherwise treat the text as a new entry — held for confirmation.
+    if (intent !== "new_entry") return await respondAndLog(audit,
+      "There isn't a matching meal waiting. Text what you ate or drank to start a new entry.",
+      { purpose: "unmatched reply", outcome: "No matching pending meal or check-in" });
+
+    // 2. Separate meal texts always get their own draft, even during a check-in.
     const type = classify(body);
     const draft = await analyzeEntry(supabase, body, type);
 
@@ -352,7 +371,9 @@ Deno.serve(async (req) => {
 
     return await respondAndLog(
       audit,
-      confirmPrompt(draft.label, draft.carbs, draft.portion),
+      pending
+        ? `Added another meal: ${draft.label}. Nothing saved yet.\nFirst meal waiting: ${confirmPrompt(pending.label, pending.carbs_grams, pending.portion_size)}`
+        : confirmPrompt(draft.label, draft.carbs, draft.portion),
       {
         purpose: "new entry",
         outcome: `Read as "${draft.label}" — waiting for confirmation`,

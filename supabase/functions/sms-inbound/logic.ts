@@ -20,14 +20,16 @@ export function classify(text: string): EntryType {
   return "food";
 }
 
-export type ReplyIntent = "stop" | "confirm" | "discard" | "correction";
+export type ReplyIntent = "stop" | "confirm" | "discard" | "correction" | "new_entry" | "checkin";
 
 export function interpretReply(body: string): ReplyIntent {
   const text = body.trim();
   if (/^(stop|unsubscribe|cancel)$/i.test(text)) return "stop";
-  if (/^(yes|y|yeah|yep|ok|okay|correct|confirm|save)\b/i.test(text)) return "confirm";
-  if (/^(no|n|nope|discard|delete|nevermind|never mind)\b/i.test(text)) return "discard";
-  return "correction";
+  if (/^(yes|y|yeah|yep|ok|okay|correct|confirm|save)(\s+please)?[.!]?$/i.test(text)) return "confirm";
+  if (/^(no|n|nope|discard|delete|nevermind|never mind)[.!]?$/i.test(text)) return "discard";
+  if (/^(edit|correction|correct to|actually|instead|it was|make that|change to)\b/i.test(text)) return "correction";
+  if (/^(note:|check-in:|i feel\b|i am feeling\b|feeling\b)/i.test(text)) return "checkin";
+  return "new_entry";
 }
 
 // Ask the person to check the entry before anything is written to their journal.
@@ -35,7 +37,7 @@ export function confirmPrompt(label: string, carbs: number | null, portion: stri
   const details = [carbs ? `~${carbs}g carbs` : null, portion ? `${portion} portion` : null]
     .filter(Boolean)
     .join(", ");
-  return `Got it: ${label}${details ? ` (${details})` : ""}.\nReply YES to save, NO to discard, or just text me the correction.`;
+  return `Got it: ${label}${details ? ` (${details})` : ""}.\nReply YES to save, NO to discard, or EDIT followed by a correction. A separate food text adds another meal.`;
 }
 
 // Warm confirmation sent back after the entry is written to the journal.

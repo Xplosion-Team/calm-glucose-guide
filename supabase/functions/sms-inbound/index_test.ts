@@ -40,6 +40,7 @@ Deno.test("reply intents drive the confirmation state machine", () => {
   }
   assertEquals(interpretReply("stop"), "stop");
   assertEquals(interpretReply("it was two slices of toast"), "correction");
+  assertEquals(interpretReply("chicken salad"), "new_entry");
 });
 
 Deno.test("draft confirmation prompt shows the estimate before anything saves", () => {
@@ -85,7 +86,7 @@ function makeInbox(analyze: (text: string) => { label: string; carbs: number | n
 
   function receive(userId: string, body: string) {
     const intent = interpretReply(body);
-    const pending = [...drafts].reverse().find((d) => d.user_id === userId && d.status === "pending");
+    const pending = drafts.find((d) => d.user_id === userId && d.status === "pending");
 
     if (pending && intent === "confirm") {
       pending.status = "confirmed";
@@ -106,7 +107,7 @@ function makeInbox(analyze: (text: string) => { label: string; carbs: number | n
 
     const type = classify(body);
     const parsed = analyze(body);
-    if (pending) {
+    if (pending && intent === "correction") {
       pending.type = type;
       pending.label = parsed.label;
       pending.carbs_grams = parsed.carbs;
@@ -172,4 +173,36 @@ Deno.test("NO discards the draft and saves nothing", () => {
   assertEquals(inbox.foodLogs.length, 0);
   assertEquals(inbox.drafts[0].status, "discarded");
   assertEquals(out.includes("didn't save it"), true);
+});
+
+Deno.test("multiple food messages preserve separate drafts and YES saves oldest first", () => {
+  const inbox = makeInbox(fakeAnalyze);
+  inbox.receive(MIRNA.userId, "turkey sandwich");
+  inbox.receive(MIRNA.userId, "toast");
+  assertEquals(inbox.drafts.length, 2);
+  assertEquals(inbox.drafts.map(d => d.label), ["Turkey sandwich", "Two slices of toast"]);
+  assertEquals(inbox.foodLogs.length, 0);
+  inbox.receive(MIRNA.userId, "YES");
+  assertEquals(inbox.foodLogs.map(d => d.label), ["Turkey sandwich"]);
+  assertEquals(inbox.drafts[1].status, "pending");
+  inbox.receive(MIRNA.userId, "YES");
+  assertEquals(inbox.foodLogs.map(d => d.label), ["Turkey sandwich", "Two slices of toast"]);
+});
+
+Deno.test("discarding one meal preserves the next waiting meal", () => {
+  const inbox = makeInbox(fakeAnalyze);
+  inbox.receive(MIRNA.userId, "turkey sandwich");
+  inbox.receive(MIRNA.userId, "toast");
+  inbox.receive(MIRNA.userId, "NO");
+  assertEquals(inbox.drafts.map(d => d.status), ["discarded", "pending"]);
+  inbox.receive(MIRNA.userId, "YES");
+  assertEquals(inbox.foodLogs.map(d => d.label), ["Two slices of toast"]);
+});
+
+Deno.test("food messages route as new meals rather than check-in notes or confirmations", () => {
+  assertEquals(interpretReply("chicken salad"), "new_entry");
+  assertEquals(interpretReply("yes I also had toast"), "new_entry");
+  assertEquals(interpretReply("no sugar coffee"), "new_entry");
+  assertEquals(interpretReply("I feel fine"), "checkin");
+  assertEquals(interpretReply("EDIT two slices of toast"), "correction");
 });
