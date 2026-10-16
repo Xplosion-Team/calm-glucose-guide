@@ -6,10 +6,10 @@ const M = 60000;
 const r = (min: number, v: number) => ({ t: T0 + min * M, v });
 const lunch = [r(-30, 112), r(0, 110), r(15, 115), r(30, 122), r(45, 128), r(60, 120), r(90, 112)];
 
-Deno.test("a 15+ rise with no meal is detected; under 15 is not", () => {
+Deno.test("a 20+ rise with no meal is detected; under 20 is not", () => {
   assertEquals(detectRises(lunch, []).length, 1);
   assertEquals(detectRises(lunch, [])[0].start, T0);
-  assertEquals(detectRises(lunch.map((p) => ({ ...p, v: Math.min(p.v, 120) })), []).length, 0);
+  assertEquals(detectRises(lunch.map((p) => ({ ...p, v: Math.min(p.v, 125) })), []).length, 0);
 });
 
 Deno.test("a meal from 90 min before to 60 min after explains the rise", () => {
