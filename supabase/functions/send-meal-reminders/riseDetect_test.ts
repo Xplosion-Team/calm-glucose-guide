@@ -12,10 +12,10 @@ Deno.test("a 20+ rise with no meal is detected; under 20 is not", () => {
   assertEquals(detectRises(lunch.map((p) => ({ ...p, v: Math.min(p.v, 125) })), []).length, 0);
 });
 
-Deno.test("a meal from 90 min before to 60 min after explains the rise", () => {
+Deno.test("a meal from 90 min before to 120 min after explains the rise", () => {
   assertEquals(detectRises(lunch, [T0 - 80 * M]).length, 0);
-  assertEquals(detectRises(lunch, [T0 + 50 * M]).length, 0);
-  assertEquals(detectRises(lunch, [T0 + 70 * M]).length, 1);
+  assertEquals(detectRises(lunch, [T0 + 70 * M]).length, 0);
+  assertEquals(detectRises(lunch, [T0 + 130 * M]).length, 1);
 });
 
 Deno.test("waits 30 minutes before texting", () => {
