@@ -14,6 +14,13 @@ import {
   phoneVariants,
   savedReplyText,
   sumCarbs,
+  eatenLine,
+  findGlucoseRise,
+  isTimeReply,
+  mealWindow,
+  parseEatenTime,
+  atLocalMinutes,
+  type EatenTime,
 } from "./logic.ts";
 
 const corsHeaders = {
@@ -246,7 +253,7 @@ Deno.serve(async (req) => {
     const sincePending = new Date(Date.now() - 6 * 3.6e6).toISOString();
     const { data: pending } = await supabase
       .from("sms_pending_logs")
-      .select("id, type, label, carbs_grams, portion_size, original_text")
+      .select("id, type, label, carbs_grams, portion_size, original_text, eaten_at, eaten_at_source")
       .eq("user_id", userId)
       .eq("status", "pending")
       .gte("created_at", sincePending)
@@ -265,6 +272,19 @@ Deno.serve(async (req) => {
       return next ? `\nNext meal waiting: ${confirmPrompt(next.label, next.carbs_grams, next.portion_size)}` : "";
     }
 
+    const { data: eng } = await supabase.from("user_engagement").select("timezone").eq("user_id", userId).maybeSingle();
+    const tz = (eng as any)?.timezone || "America/Chicago";
+    const now = new Date();
+
+    // A time-only reply ("1pm", "2 hours ago") sets when the oldest waiting meal was eaten.
+    if (pending && !photos.length && isTimeReply(body, now, tz)) {
+      const at = parseEatenTime(body, now, tz)!;
+      await supabase.from("sms_pending_logs").update({ eaten_at: at.toISOString(), eaten_at_source: "stated" }).eq("id", pending.id);
+      return await respondAndLog(audit,
+        `${confirmPrompt(pending.label, pending.carbs_grams, pending.portion_size)}\n${eatenLine({ at, source: "stated" }, tz)}`,
+        { purpose: "meal time", outcome: `Eating time set for "${pending.label}"`, relatedTable: "sms_pending_logs", relatedId: pending.id as string });
+    }
+
     if (pending && intent !== "new_entry" && intent !== "checkin") {
       if (intent === "confirm") {
         const { data: savedLog, error: insertError } = await supabase.from("food_logs").insert({
@@ -274,6 +294,7 @@ Deno.serve(async (req) => {
           carbs_grams: pending.carbs_grams,
           portion_size: pending.portion_size,
           source: "sms",
+          ...(pending.eaten_at ? { logged_at: pending.eaten_at } : {}),
           notes: pending.label === pending.original_text.slice(0, 60) ? null : pending.original_text,
         }).select("id").maybeSingle();
         if (insertError) {
@@ -393,7 +414,24 @@ Deno.serve(async (req) => {
       purpose: "meal photo", outcome: "Photo analysis failed; no meal saved", status: "failed",
     }); }
 
+    // When was it eaten? Stated time > glucose rise > typical meal window > time texted.
+    let eaten: EatenTime = { at: now, source: "texted" };
+    const stated = parseEatenTime(body, now, tz);
+    if (stated) eaten = { at: stated, source: "stated" };
+    else if (type !== "medication") {
+      const win = mealWindow(body);
+      const from = new Date(now.getTime() - 6 * 3.6e6);
+      const { data: cgm } = await supabase.from("cgm_readings").select("ts, mg_dl")
+        .eq("user_id", userId).gte("ts", from.toISOString()).order("ts", { ascending: true }).limit(500);
+      const winRange = win ? { from: atLocalMinutes(win[0], now, tz), to: atLocalMinutes(win[1], now, tz) } : undefined;
+      const rise = findGlucoseRise((cgm ?? []) as any, winRange && winRange.from < winRange.to ? winRange : undefined);
+      if (rise) eaten = { at: rise, source: "glucose_rise" };
+      else if (win) eaten = { at: atLocalMinutes(Math.round((win[0] + win[1]) / 2), now, tz), source: "meal_window" };
+    }
+
     const { data: draftRow, error: draftError } = await supabase.from("sms_pending_logs").insert({
+      eaten_at: eaten.at.toISOString(),
+      eaten_at_source: eaten.source,
       user_id: userId,
       type,
       label: draft.label,
@@ -416,7 +454,7 @@ Deno.serve(async (req) => {
       audit,
       pending
         ? `Added another meal: ${draft.label}. Nothing saved yet.\nFirst meal waiting: ${confirmPrompt(pending.label, pending.carbs_grams, pending.portion_size)}`
-        : confirmPrompt(draft.label, draft.carbs, draft.portion),
+        : `${confirmPrompt(draft.label, draft.carbs, draft.portion)}\n${eatenLine(eaten, tz)}`,
       {
         purpose: photos.length ? "meal photo" : "new entry",
         outcome: `Read as "${draft.label}" — waiting for confirmation`,
