@@ -1,7 +1,7 @@
 # Roadmap
 
-- [ ] Test Kehlin's salmon, mashed potatoes, macaroni draft and YES save; verify Today and Admin.
-- [ ] Show today's saved meal carbs in Daily Insights and test totals.
+- [x] Test Kehlin's salmon, mashed potatoes, macaroni draft and YES save directly through the app; verify Today and Admin (4 to 5 approved). Carrier-originated sending was not simulated.
+- [x] Show today's saved meal carbs in Daily Insights; 3 total tests passed and signed-in UI shows 132g (80g new meal + 52g earlier meal).
 
 - [x] Process photo texts with the in-app meal analyzer, keeping YES/NO review and separate drafts.
 - [x] Pass 17 messaging/photo tests, verify live sample-photo analysis, and reject unsigned photo webhooks.
