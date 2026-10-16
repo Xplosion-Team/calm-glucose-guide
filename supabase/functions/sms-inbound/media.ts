@@ -1,4 +1,9 @@
 // Photos stay in memory only. Never persist signed URLs, credentials or image bytes.
+import { interpretReply } from "./logic.ts";
+export function photoReplyIntent(body: string, hasPhotos: boolean) {
+  const intent = interpretReply(body);
+  return hasPhotos && intent !== "stop" && intent !== "correction" ? "new_entry" : intent;
+}
 export const MAX_PHOTOS = 4;
 export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 export const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];

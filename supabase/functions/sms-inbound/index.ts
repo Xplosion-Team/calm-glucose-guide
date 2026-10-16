@@ -6,7 +6,7 @@
 //      estimates the label, carbs and portion, and a food_log row is inserted.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logSmsEvent, updateSmsEvent } from "../_shared/smsAudit.ts";
-import { downloadPhoto, parsePhotos, verifyTwilioSignature, type MealPhoto } from "./media.ts";
+import { downloadPhoto, parsePhotos, photoReplyIntent, verifyTwilioSignature, type MealPhoto } from "./media.ts";
 import {
   classify,
   confirmPrompt,
@@ -215,8 +215,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const textIntent = interpretReply(body);
-    const intent = attachments.length && textIntent !== "stop" && textIntent !== "correction" ? "new_entry" : textIntent;
+    const intent = photoReplyIntent(body, attachments.length > 0);
 
     // Simple opt-out courtesy.
     if (intent === "stop") {
