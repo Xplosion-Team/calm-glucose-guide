@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useFoodLogs, type EntryType, type Source, type FoodLog } from "@/hooks/useFoodLogs";
 import { SmartLogCard } from "@/components/today/SmartLogCard";
 import { MealsAndRises } from "@/components/today/MealsAndRises";
+import { DailyTimeline } from "@/components/today/DailyTimeline";
 import { FavoriteMeals } from "@/components/today/FavoriteMeals";
 import { JournalView } from "@/components/journal/JournalView";
 import { SmsTimeline } from "@/components/journal/SmsTimeline";
@@ -201,6 +202,7 @@ export function TodayTab() {
         onPick={(d) => openDraft(d, "manual")}
         onLogAt={(at) => openDraft({ type: "food", label: "", logged_at: at.toISOString() }, "manual")}
       />
+      <DailyTimeline />
       <FavoriteMeals onPick={(d) => openDraft(d, "manual")} />
 
       <div className="flex justify-end">
