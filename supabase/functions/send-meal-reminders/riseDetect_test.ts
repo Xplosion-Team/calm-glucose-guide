@@ -4,7 +4,7 @@ import { detectRises, planRiseTexts, matchTimedReply, isNoMealReply } from "../_
 const T0 = Date.parse("2026-10-16T17:00:00Z");
 const M = 60000;
 const r = (min: number, v: number) => ({ t: T0 + min * M, v });
-const lunch = [r(-30, 112), r(0, 110), r(15, 115), r(30, 122), r(45, 128), r(60, 120), r(90, 112)];
+const lunch = [r(-30, 112), r(0, 110), r(15, 115), r(30, 122), r(45, 134), r(60, 120), r(90, 112)];
 
 Deno.test("a 20+ rise with no meal is detected; under 20 is not", () => {
   assertEquals(detectRises(lunch, []).length, 1);
