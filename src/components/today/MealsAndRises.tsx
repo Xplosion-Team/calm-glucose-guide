@@ -67,6 +67,28 @@ export function MealsAndRises({ onPick, onLogAt }: Props) {
     .map((r) => ({ ...r, server: riseStatus.find((x) => Math.abs(x.start - r.start) < 30 * 60000) }))
     .filter((r) => !r.server || !["no_meal", "answered", "cancelled"].includes(r.server.status))
     .slice(0, 5), [readings, meals, riseStatus]);
+  // "No" is remembered so the card (and any rise text) won't ask again.
+  const markNoMeal = async (start: number) => {
+    const existing = riseStatus.find((x) => Math.abs(x.start - start) < 30 * 60000);
+    setRiseStatus((prev) => existing
+      ? prev.map((x) => (x === existing ? { ...x, status: "no_meal" } : x))
+      : [...prev, { start, status: "no_meal", sentAt: null }]);
+    const { data: u } = await supabase.auth.getUser();
+    if (!u.user) return;
+    const iso = new Date(existing?.start ?? start).toISOString();
+    if (existing) {
+      await supabase.from("spike_events").update({ status: "no_meal", user_response: "no_meal", responded_at: new Date().toISOString() })
+        .eq("user_id", u.user.id).eq("kind", "unlogged").eq("rise_start_at", iso);
+    } else {
+      const r = rises.find((x) => x.start === start);
+      await supabase.from("spike_events").insert({
+        user_id: u.user.id, kind: "unlogged", status: "no_meal", rise_start_at: iso, detected_at: iso,
+        baseline_mg_dl: r?.startValue ?? 0, peak_mg_dl: r?.peak ?? 0, rise_mg_dl: r ? r.peak - r.startValue : 0,
+        window_min: r ? Math.round((r.peakAt - r.start) / 60000) : 0, sensitivity: "unlogged",
+        user_response: "no_meal", responded_at: new Date().toISOString(),
+      });
+    }
+  };
   const clock = (t: number) => new Date(t).toLocaleTimeString(es ? "es-ES" : "en-US", { hour: "numeric", minute: "2-digit" });
 
   if (!loaded || (!curves.length && !rises.length)) return null;
@@ -82,26 +104,40 @@ export function MealsAndRises({ onPick, onLogAt }: Props) {
   const renderCards = (big: boolean) => {
     const card = cn("text-left rounded-2xl border-2 bg-card p-3 space-y-2 touch-target transition-all", big ? "w-full p-4 flex flex-col overflow-hidden" : "shrink-0 w-60 snap-start");
     return (<>
-        {rises.map((r) => (
-          <button key={`rise-${r.start}`} onClick={() => { setExpanded(false); onLogAt?.(new Date(r.start)); }}
-            className={cn(card, "border-status-rising/50 bg-status-rising-bg/40 hover:border-status-rising")}>
+        {rises.map((r) => {
+          const around = clock(Math.round(r.start / (15 * 60000)) * 15 * 60000);
+          return (
+          <div key={`rise-${r.start}`}
+            className={cn(card, "border-status-rising/50 bg-status-rising-bg/40")}>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-status-rising-bg text-status-rising flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-status-rising-bg text-status-rising flex items-center justify-center shrink-0">
                 <HelpCircle className="w-4 h-4" />
               </div>
-              <p className="font-medium text-foreground text-sm">{es ? "¿Comiste algo?" : "Did you eat something?"}</p>
+              <p className="font-medium text-foreground text-sm">{es ? `¿Comiste alrededor de las ${around}?` : `Did you eat around ${around}?`}</p>
             </div>
             <p className="text-xs text-muted-foreground">{when(r.start)}</p>
             <Spark points={r.points} markAt={r.start} tone="rise" big={big} />
             <p className="text-sm text-status-rising font-medium flex items-center gap-1">
-              <TrendingUp className="w-4 h-4" /> {es ? "Subió" : "Rose"} ~{Math.round(r.peak - r.startValue)} {es ? "sin comida anotada" : "with no meal logged"}
+              <TrendingUp className="w-4 h-4 shrink-0" /> {es ? "Subió" : "Rose"} ~{Math.round(r.peak - r.startValue)} {es ? "sin comida anotada" : "with no meal logged"}
             </p>
             {r.server?.sentAt && (
               <p className="text-xs text-muted-foreground">{es ? `Mensaje enviado ${clock(r.server.sentAt)}` : `Texted ${clock(r.server.sentAt)}`}</p>
             )}
-            <p className="text-xs text-primary font-medium">{es ? "Toca para anotar una comida" : "Tap to log a meal for this time"}</p>
-          </button>
-        ))}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <Button size="sm" className="h-11" onClick={() => { setExpanded(false); onLogAt?.(new Date(r.start)); }}>
+                {es ? "Sí, anotar" : "Yes, log it"}
+              </Button>
+              <Button size="sm" variant="outline" className="h-11" onClick={() => void markNoMeal(r.start)}>
+                {es ? "No comí" : "No"}
+              </Button>
+            </div>
+            <button className="text-xs text-primary font-medium underline-offset-2 hover:underline touch-target min-h-0 text-left"
+              onClick={() => { setExpanded(false); onLogAt?.(new Date(r.start)); }}>
+              {es ? "Comí a otra hora — la cambiaré" : "I ate at a different time — I'll change it"}
+            </button>
+          </div>
+          );
+        })}
 
         {curves.map((m) => {
           const Icon = m.type === "drink" ? Coffee : Apple;
