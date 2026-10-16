@@ -122,6 +122,7 @@ export function isTimeReply(text: string, now: Date, tz: string) {
   if (!parseEatenTime(text, now, tz)) return false;
   const rest = text.toLowerCase()
     .replace(/\b(i|ate|it|was|at|around|about|approx(imately)?|ago|noon|today|eaten|half|an?|hours?|hrs?|minutes?|mins?|a\.?m\.?|p\.?m\.?)\b/g, "")
+    .replace(/(\d)\s*[ap]\.?m\.?/g, "$1")
     .replace(/[\d:.,!~\s]/g, "");
   return rest.length === 0;
 }
