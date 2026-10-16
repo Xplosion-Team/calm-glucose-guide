@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Test Kehlin's salmon, mashed potatoes, macaroni draft and YES save; verify Today and Admin.
+- [ ] Show today's saved meal carbs in Daily Insights and test totals.
+
 - [x] Process photo texts with the in-app meal analyzer, keeping YES/NO review and separate drafts.
 - [x] Pass 17 messaging/photo tests, verify live sample-photo analysis, and reject unsigned photo webhooks.
 - [ ] Verify a real photo from Kehlin's linked number; blocked until a meal photo arrives at 833-700-8650.

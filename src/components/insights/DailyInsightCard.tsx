@@ -4,6 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
+import { summarizeDailyCarbs, type CarbLog } from "@/lib/daily-carbs";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface DailyInsight {
   id: string;
@@ -40,9 +42,40 @@ function yesterdayStr(): string {
 
 interface Props {
   onLogMissed?: (at: string) => void;
+  logs?: CarbLog[];
+  logsLoading?: boolean;
 }
 
-export function DailyInsightCard({ onLogMissed }: Props) {
+export function DailyInsightCard({ onLogMissed, logs = [], logsLoading = false }: Props) {
+  const { lang } = useI18n();
+  const summary = summarizeDailyCarbs(logs);
+  return (
+    <section aria-label={lang === "es" ? "Perspectivas diarias" : "Daily Insights"} className="space-y-3">
+      <Card>
+        <CardContent className="p-4 space-y-3">
+          <h3 className="text-lg font-semibold">{lang === "es" ? "Carbohidratos de hoy" : "Today's logged carbs"}</h3>
+          {logsLoading ? <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" aria-label="Loading" /> : <>
+            <p className="text-2xl font-semibold text-primary">
+              {summary.estimatedCount ? `~${summary.total} g` : "–"}
+              <span className="ml-2 text-lg font-normal text-muted-foreground">{lang === "es" ? "carbohidratos" : "carbs"}</span>
+            </p>
+            {summary.meals.length ? <ul className="space-y-2">
+              {summary.meals.map((meal, index) => <li key={`${meal.logged_at}-${index}`} className="flex items-start justify-between gap-3 text-lg">
+                <span className="min-w-0 break-words">{meal.label}</span>
+                <span className="shrink-0 text-muted-foreground">{meal.carbs_grams == null ? "–" : `~${meal.carbs_grams} g`}</span>
+              </li>)}
+            </ul> : <p className="text-lg text-muted-foreground">{lang === "es" ? "Todavía no hay comidas guardadas hoy." : "No meals saved today yet."}</p>}
+            {summary.missingCount > 0 && <p className="text-lg text-muted-foreground">{lang === "es" ? `${summary.missingCount} sin estimación de carbohidratos.` : `${summary.missingCount} without a carb estimate.`}</p>}
+            <p className="text-lg text-muted-foreground">{lang === "es" ? "Estimaciones de tus comidas y bebidas guardadas; no es una meta diaria." : "Estimates from saved meals and drinks—not a daily target."}</p>
+          </>}
+        </CardContent>
+      </Card>
+      <YesterdayInsightCard onLogMissed={onLogMissed} />
+    </section>
+  );
+}
+
+function YesterdayInsightCard({ onLogMissed }: Props) {
   const [insight, setInsight] = useState<DailyInsight | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
