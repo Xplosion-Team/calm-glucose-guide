@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Review the Recent Meals screenshot and propose dated meal/glucose views plus matching for meals logged later; implementation awaits the user's chosen view.
+
 - [x] Test Kehlin's salmon, mashed potatoes, macaroni draft and YES save directly through the app; verify Today and Admin (4 to 5 approved). Carrier-originated sending was not simulated.
 - [x] Show today's saved meal carbs in Daily Insights; 3 total tests passed and signed-in UI shows 132g (80g new meal + 52g earlier meal).
 
