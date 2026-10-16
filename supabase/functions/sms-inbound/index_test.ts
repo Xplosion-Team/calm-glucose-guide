@@ -65,7 +65,7 @@ Deno.test("saved reply reports the entry and the running carb total", () => {
     { type: "medication", label: "Metformin", carbs_grams: null, portion_size: null },
     0,
   );
-  assertEquals(med, "Saved: Metformin. Thanks for keeping up with it 💚");
+  assertEquals(med, "Saved: Metformin. Thanks for keeping up with it 💚\nSee your latest readings: https://calmglucose.com");
 });
 
 // End-to-end state machine over the pending-draft table, using the same
@@ -224,4 +224,12 @@ Deno.test("glucose rise marks meal start", () => {
     .map(([t,v]) => ({ ts: `2026-10-16T${t}:00Z`, mg_dl: v as number }));
   assertEquals(findGlucoseRise(r)!.toISOString(), "2026-10-16T17:45:00.000Z");
   assertEquals(findGlucoseRise(r.map((x) => ({ ...x, mg_dl: 110 }))), null);
+});
+
+import { interpretReply as ir2, savedReplyText as srt2, readingsLinkText as rlt } from "./logic.ts";
+Deno.test("LINK/READINGS texts get the app link; saved replies include it", () => {
+  for (const t of ["link", "READINGS", "my readings", "app"]) assertEquals(ir2(t), "readings");
+  assertEquals(ir2("salmon and rice"), "new_entry");
+  assertEquals(rlt().includes("https://calmglucose.com"), true);
+  assertEquals(srt2({ type: "food", label: "Salmon", carbs_grams: 40, portion_size: null }, 40).includes("https://calmglucose.com"), true);
 });

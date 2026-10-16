@@ -20,11 +20,15 @@ export function classify(text: string): EntryType {
   return "food";
 }
 
-export type ReplyIntent = "stop" | "confirm" | "discard" | "correction" | "new_entry" | "checkin";
+export const APP_LINK = "https://calmglucose.com";
+export const readingsLinkText = () => `Here are your latest readings and meals: ${APP_LINK}`;
+
+export type ReplyIntent = "readings" | "stop" | "confirm" | "discard" | "correction" | "new_entry" | "checkin";
 
 export function interpretReply(body: string): ReplyIntent {
   const text = body.trim();
   if (/^(stop|unsubscribe|cancel)$/i.test(text)) return "stop";
+  if (/^(link|readings?|my readings|app|glucose|numbers?)[.!?]?$/i.test(text)) return "readings";
   if (/^(yes|y|yeah|yep|ok|okay|correct|confirm|save)(\s+please)?[.!]?$/i.test(text)) return "confirm";
   if (/^(no|n|nope|discard|delete|nevermind|never mind)[.!]?$/i.test(text)) return "discard";
   if (/^(edit|correction|correct to|actually|instead|it was|make that|change to)\b/i.test(text)) return "correction";
@@ -46,7 +50,7 @@ export function savedReplyText(
   dayCarbs: number,
 ) {
   if (entry.type === "medication") {
-    return `Saved: ${entry.label}. Thanks for keeping up with it 💚`;
+    return `Saved: ${entry.label}. Thanks for keeping up with it 💚\nSee your latest readings: ${APP_LINK}`;
   }
 
   const details = [
@@ -59,6 +63,7 @@ export function savedReplyText(
   const lines = [`Saved: ${entry.label}${details ? ` (${details})` : ""}.`];
   if (dayCarbs > 0) lines.push(`That's about ${dayCarbs}g of carbs logged today.`);
   lines.push("Thanks for sharing 💚 I'll check in with you a little later.");
+  lines.push(`See your latest readings: ${APP_LINK}`);
 
   return lines.join("\n");
 }
