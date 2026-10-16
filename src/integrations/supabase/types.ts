@@ -1052,11 +1052,17 @@ export type Database = {
           baseline_mg_dl: number
           created_at: string
           detected_at: string
+          digest_date: string | null
           id: string
+          kind: string
           peak_mg_dl: number
+          pending_log_id: string | null
           responded_at: string | null
           rise_mg_dl: number
+          rise_start_at: string | null
           sensitivity: string
+          sms_sent_at: string | null
+          status: string | null
           user_id: string
           user_response: string
           window_min: number
@@ -1066,11 +1072,17 @@ export type Database = {
           baseline_mg_dl: number
           created_at?: string
           detected_at?: string
+          digest_date?: string | null
           id?: string
+          kind?: string
           peak_mg_dl: number
+          pending_log_id?: string | null
           responded_at?: string | null
           rise_mg_dl: number
+          rise_start_at?: string | null
           sensitivity: string
+          sms_sent_at?: string | null
+          status?: string | null
           user_id: string
           user_response?: string
           window_min: number
@@ -1080,11 +1092,17 @@ export type Database = {
           baseline_mg_dl?: number
           created_at?: string
           detected_at?: string
+          digest_date?: string | null
           id?: string
+          kind?: string
           peak_mg_dl?: number
+          pending_log_id?: string | null
           responded_at?: string | null
           rise_mg_dl?: number
+          rise_start_at?: string | null
           sensitivity?: string
+          sms_sent_at?: string | null
+          status?: string | null
           user_id?: string
           user_response?: string
           window_min?: number
@@ -1349,6 +1367,16 @@ export type Database = {
       }
     }
     Functions: {
+      admin_rise_text_stats: {
+        Args: { _days?: number }
+        Returns: {
+          answered: number
+          meals_saved: number
+          no_meal: number
+          texted: number
+          user_id: string
+        }[]
+      }
       admin_sms_approval_stats: {
         Args: { _days?: number }
         Returns: {
