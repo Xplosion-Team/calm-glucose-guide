@@ -52,7 +52,7 @@ export function DailyTimeline() {
   const rises = useMemo(() => unmatchedRises(readings, meals).filter((r) => r.start >= t0 && r.start < t1), [readings, meals, t0, t1]);
 
   // Chart geometry (viewBox units)
-  const W = 1000, H = 480, PAD_T = 30, PAD_B = 30;
+  const W = 600, H = 420, PAD_T = 44, PAD_B = 34;
   const vals = dayReadings.map((r) => r.v);
   const lo = Math.min(70, ...vals) - 10, hi = Math.max(200, ...vals) + 10;
   const x = (t: number) => ((t - t0) / DAY) * W;
@@ -121,19 +121,19 @@ export function DailyTimeline() {
             {[0, 6, 12, 18, 24].map((h) => (
               <g key={h}>
                 <line x1={x(t0 + h * 3.6e6)} x2={x(t0 + h * 3.6e6)} y1={PAD_T} y2={H - PAD_B} className="stroke-border" strokeWidth="1" />
-                <text x={Math.min(W - 30, Math.max(4, x(t0 + h * 3.6e6) - 18))} y={H - 8} className="fill-muted-foreground" fontSize="26">
+                <text x={Math.min(W - 44, Math.max(2, x(t0 + h * 3.6e6) - 22))} y={H - 8} className="fill-muted-foreground" fontSize="22">
                   {h === 24 ? "" : new Date(t0 + h * 3.6e6).toLocaleTimeString(loc, { hour: "numeric" })}
                 </text>
               </g>
             ))}
-            {path && <path d={path} fill="none" className="stroke-primary" strokeWidth="3" strokeLinejoin="round" />}
+            {path && <path d={path} fill="none" className="stroke-primary" strokeWidth="3.5" strokeLinejoin="round" />}
 
             {rises.map((r) => (
               <g key={`r${r.start}`} onClick={() => setSelected(`r:${r.start}`)} className="cursor-pointer">
                 <line x1={x(r.start)} x2={x(r.start)} y1={PAD_T} y2={H - PAD_B} className="stroke-status-rising" strokeDasharray="6 6" strokeWidth="2" />
                 <circle cx={x(r.peakAt)} cy={y(r.peak)} r="9" className="fill-status-rising" />
-                <circle cx={x(r.start)} cy={14} r="14" className="fill-status-rising-bg stroke-status-rising" strokeWidth="2" />
-                <text x={x(r.start)} y={20} textAnchor="middle" fontSize="18" className="fill-status-rising font-bold">?</text>
+                <circle cx={x(r.start)} cy={20} r="17" className="fill-status-rising-bg stroke-status-rising" strokeWidth="2" />
+                <text x={x(r.start)} y={27} textAnchor="middle" fontSize="20" className="fill-status-rising font-bold">?</text>
               </g>
             ))}
 
@@ -143,7 +143,7 @@ export function DailyTimeline() {
                 <g key={m.id} onClick={() => setSelected(`m:${m.id}`)} className="cursor-pointer">
                   <line x1={x(m.at)} x2={x(m.at)} y1={PAD_T} y2={H - PAD_B} className="stroke-status-stable" strokeWidth="2" />
                   {v != null && <circle cx={x(m.at)} cy={y(v)} r="8" className="fill-card stroke-status-stable" strokeWidth="3" />}
-                  <circle cx={x(m.at)} cy={14} r="14" className={cn("stroke-status-stable", selected === `m:${m.id}` ? "fill-status-stable" : "fill-status-stable-bg")} strokeWidth="2" />
+                  <circle cx={x(m.at)} cy={20} r="17" className={cn("stroke-status-stable", selected === `m:${m.id}` ? "fill-status-stable" : "fill-status-stable-bg")} strokeWidth="2" />
                 </g>
               );
             })}
@@ -166,7 +166,7 @@ export function DailyTimeline() {
           {sel ? (
             <p><strong>{sel.label}</strong> · {time(sel.at)}{sel.carbs != null ? ` · ~${sel.carbs}g carbs` : ""}<br />
               {sel.rise == null ? (es ? "Sin lecturas para comparar" : "No readings to compare")
-                : sel.rise < 15 ? (es ? "Se mantuvo estable" : "Stayed steady")
+                : sel.rise < 20 ? (es ? "Se mantuvo estable" : "Stayed steady")
                 : `${es ? "Subió" : "Rose"} ~${sel.rise}${sel.peakAt ? (es ? `, pico a las ${time(sel.peakAt)}` : `, peaked at ${time(sel.peakAt)}`) : ""}`}
             </p>
           ) : selRise && (
@@ -184,10 +184,10 @@ export function DailyTimeline() {
             return (
               <li key={row.k}>
                 <button onClick={() => setSelected(row.k)} className={cn("w-full flex items-center gap-3 py-3 text-left touch-target", selected === row.k && "font-semibold")}>
-                  <span className="w-16 shrink-0 text-sm text-muted-foreground">{time(row.t)}</span>
+                  <span className="w-[4.5rem] shrink-0 text-sm text-muted-foreground">{time(row.t)}</span>
                   <Icon className={cn("w-5 h-5 shrink-0", "meal" in row && row.meal ? "text-status-stable" : "text-status-rising")} />
-                  <span className="flex-1 truncate text-foreground">
-                    {"meal" in row && row.meal ? row.meal.label : (es ? "Subida sin comida anotada" : "Rise with no meal logged")}
+                  <span className="flex-1 min-w-0 leading-snug text-foreground">
+                    {"meal" in row && row.meal ? row.meal.label : (es ? "Subida sin comida" : "Rise, no meal")}
                   </span>
                   <span className="text-sm text-muted-foreground shrink-0">
                     {"meal" in row && row.meal ? (row.meal.rise != null ? `+${row.meal.rise}` : "—")

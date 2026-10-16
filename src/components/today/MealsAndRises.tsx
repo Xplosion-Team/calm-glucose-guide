@@ -155,7 +155,7 @@ export function MealsAndRises({ onPick, onLogAt }: Props) {
               <p className="text-sm text-foreground">
                 {m.rise == null
                   ? <span className="text-muted-foreground">{es ? "Sin lecturas para comparar" : "No readings to compare"}</span>
-                  : m.rise < 15
+                  : m.rise < 20
                     ? (es ? "Se mantuvo estable" : "Stayed steady")
                     : <>{es ? "Subió" : "Rose"} <strong>~{m.rise}</strong>{m.peakAt ? (es ? `, pico ${Math.round((m.peakAt - m.at) / 60000)} min después` : `, peaked ${Math.round((m.peakAt - m.at) / 60000)} min later`) : ""}</>}
               </p>
