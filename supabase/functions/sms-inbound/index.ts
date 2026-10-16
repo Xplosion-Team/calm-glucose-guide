@@ -225,6 +225,10 @@ Deno.serve(async (req) => {
 
     const intent = photoReplyIntent(body, attachments.length > 0);
 
+    if (intent === "readings") {
+      return await respondAndLog(audit, readingsLinkText(), { purpose: "readings-link", outcome: "Sent app link" });
+    }
+
     // Simple opt-out courtesy.
     if (intent === "stop") {
       await supabase
