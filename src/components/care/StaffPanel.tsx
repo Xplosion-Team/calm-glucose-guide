@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { RefreshCw, Search } from "lucide-react";
 import { CareChat } from "./CareChat";
+import { MemberDashboard } from "./MemberDashboard";
 import { cn } from "@/lib/utils";
 
 interface Member {
@@ -40,6 +41,7 @@ export function StaffPanel() {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [open, setOpen] = useState<Member | null>(null);
+  const [view, setView] = useState<"chat" | "dashboard">("chat");
 
   const load = useCallback(async () => {
     const { data } = await supabase.rpc("admin_members_overview");
@@ -131,7 +133,22 @@ export function StaffPanel() {
               {[open?.email, open?.phone].filter(Boolean).join(" · ")} · Seen {ago(open?.last_seen_at ?? null)}
             </p>
           </SheetHeader>
-          {open && <div className="flex-1 min-h-0 mt-2"><CareChat memberId={open.user_id} asStaff /></div>}
+          {open && (
+            <div className="flex-1 min-h-0 mt-2 flex flex-col">
+              <div className="grid grid-cols-2 gap-2 pb-2">
+                {(["chat", "dashboard"] as const).map((v) => (
+                  <button key={v} onClick={() => setView(v)}
+                    className={cn("rounded-xl py-2.5 text-lg font-medium border",
+                      view === v ? "bg-primary text-primary-foreground border-primary" : "bg-secondary/50 border-transparent")}>
+                    {v === "chat" ? "Chat" : "Dashboard"}
+                  </button>
+                ))}
+              </div>
+              <div className="flex-1 min-h-0">
+                {view === "chat" ? <CareChat memberId={open.user_id} asStaff /> : <MemberDashboard memberId={open.user_id} />}
+              </div>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
     </div>

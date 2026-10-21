@@ -1,18 +1,8 @@
 # Roadmap
 
-- [x] Review the Recent Meals screenshot and propose dated meal/glucose views plus matching for meals logged later; implementation awaits the user's chosen view.
-
-- [x] Test Kehlin's salmon, mashed potatoes, macaroni draft and YES save directly through the app; verify Today and Admin (4 to 5 approved). Carrier-originated sending was not simulated.
-- [x] Show today's saved meal carbs in Daily Insights; 3 total tests passed and signed-in UI shows 132g (80g new meal + 52g earlier meal).
-
 - [x] Process photo texts with the in-app meal analyzer, keeping YES/NO review and separate drafts.
-- [x] Pass 17 messaging/photo tests, verify live sample-photo analysis, and reject unsigned photo webhooks.
 - [ ] Verify a real photo from Kehlin's linked number; blocked until a meal photo arrives at 833-700-8650.
-
-- [x] Preserve multiple meal texts, test confirmation and correction routing, and deploy.
-
-- [x] Add Nudge Persona & Voice Settings to Account.
-- [x] Apply persona and voice to in-app nudges and reminder SMS.
-- [x] Add safe Lovable AI message generation with required-action guardrails.
-- [x] Add authenticated Send Test SMS Nudge and verify the real flow.
 - [x] Text members when blood sugar rises with no meal logged (real-time + evening summary)
+- [x] Mirror inbound/outbound member texts into the care team chat (sms_in / sms_out rows in care_messages).
+- [x] Let staff send a chat message as a text message to the member's phone (send-care-sms edge function).
+- [x] Build a member dashboard for the care team (per-member glucose, meals, rises, texts, chat).

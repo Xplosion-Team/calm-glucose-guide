@@ -1400,6 +1400,7 @@ export type Database = {
       }
     }
     Functions: {
+      admin_member_dashboard: { Args: { _member: string }; Returns: Json }
       admin_members_overview: {
         Args: never
         Returns: {
