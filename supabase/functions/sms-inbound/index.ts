@@ -4,7 +4,7 @@
 //      note on that meal and the reminder is closed out.
 //   2. Otherwise the text is treated as a new food/drink entry: analyze-food
 //      estimates the label, carbs and portion, and a food_log row is inserted.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logSmsEvent, updateSmsEvent } from "../_shared/smsAudit.ts";
 import { isNoMealReply, matchTimedReply } from "../_shared/riseDetect.ts";
 import { downloadPhoto, parsePhotos, photoReplyIntent, verifyTwilioSignature, type MealPhoto } from "./media.ts";
@@ -45,7 +45,7 @@ function reply(message: string) {
 
 
 async function analyzeEntry(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   text: string,
   type: "food" | "drink" | "medication",
   photos: MealPhoto[] = [],
@@ -86,7 +86,7 @@ async function analyzeEntry(
 
 // Warm confirmation sent back after the entry is written to the journal.
 async function savedReply(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   userId: string,
   entry: { type: string; label: string; carbs_grams: number | null; portion_size: string | null },
 ) {
