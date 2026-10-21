@@ -1,0 +1,2 @@
+alter table public.care_messages drop constraint care_messages_sender_role_check;
+alter table public.care_messages add constraint care_messages_sender_role_check check (sender_role in ('member', 'staff', 'sms_in', 'sms_out'));

@@ -43,6 +43,13 @@
       "when": 1792604009991,
       "tag": "0005_staff_member_dashboard",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792604265651,
+      "tag": "0006_care_messages_sms_roles",
+      "breakpoints": true
     }
   ]
 }
