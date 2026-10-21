@@ -29,6 +29,8 @@ import { CirclesTab } from "@/components/tabs/CirclesTab";
 import { HealthTab } from "@/components/tabs/HealthTab";
 import { AdminTab } from "@/components/tabs/AdminTab";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { StaffPanel } from "@/components/care/StaffPanel";
+import { MemberMessagesButton } from "@/components/care/MemberMessagesButton";
 import { useGlucoseData } from "@/hooks/useGlucoseData";
 import { useSpikeDetection } from "@/hooks/useSpikeDetection";
 import { SpikeBanner } from "@/components/spike/SpikeBanner";
@@ -89,15 +91,40 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<TabId>("journey");
   const [journeySub, setJourneySub] = useState<JourneySub>("today");
   const [exploreSub, setExploreSub] = useState<ExploreSub>("whatif");
-  const { isAdmin } = useIsAdmin();
+  const { isAdmin, isStaff } = useIsAdmin();
+  const [staffMode, setStaffMode] = useState(() => localStorage.getItem("staffMode") === "1");
+  const toggleStaffMode = () => {
+    const next = !staffMode;
+    setStaffMode(next);
+    localStorage.setItem("staffMode", next ? "1" : "0");
+    setActiveTab(next ? "members" : "journey");
+  };
+  const inStaff = staffMode && isStaff;
+
+  useEffect(() => {
+    if (inStaff && activeTab !== "members" && activeTab !== "admin") setActiveTab("members");
+    if (!inStaff && (activeTab === "members" || activeTab === "admin")) setActiveTab("journey");
+  }, [inStaff, activeTab]);
+
+  // Keep "last seen" fresh for the care team view
+  useEffect(() => {
+    const ping = () => { void supabase.rpc("touch_last_seen"); };
+    ping();
+    const id = setInterval(ping, 5 * 60000);
+    return () => clearInterval(id);
+  }, []);
 
   // Build translated tab arrays
-  const bottomTabs = [
-    { id: "journey" as TabId, label: t("nav.journey"), icon: Map },
-    { id: "health" as TabId, label: t("nav.circles"), icon: Users },
-    { id: "explore" as TabId, label: t("nav.explore"), icon: Compass },
-    ...(isAdmin ? [{ id: "admin" as TabId, label: "Admin", icon: ShieldCheck }] : []),
-  ];
+  const bottomTabs = inStaff
+    ? [
+        { id: "members" as TabId, label: "Members", icon: Users },
+        ...(isAdmin ? [{ id: "admin" as TabId, label: "Text stats", icon: ShieldCheck }] : []),
+      ]
+    : [
+        { id: "journey" as TabId, label: t("nav.journey"), icon: Map },
+        { id: "health" as TabId, label: t("nav.circles"), icon: Users },
+        { id: "explore" as TabId, label: t("nav.explore"), icon: Compass },
+      ];
 
   const journeySubs = [
     { id: "today" as JourneySub, label: t("journey.today"), icon: Apple },
@@ -194,8 +221,15 @@ const Index = () => {
           className="flex items-center justify-between mt-2 mb-4 gap-2 animate-fade-in flex-wrap"
           data-tour="dexcom"
         >
-          <DexcomNightscoutConnect />
-          <div className="flex items-center gap-1">
+          {!inStaff && <DexcomNightscoutConnect />}
+          <div className="flex items-center gap-1 flex-wrap">
+            {isStaff && (
+              <Button variant={inStaff ? "default" : "outline"} size="sm" onClick={toggleStaffMode} className="gap-1">
+                <ShieldCheck className="w-4 h-4" aria-hidden="true" />
+                {inStaff ? "Switch to my app" : "Switch to care team"}
+              </Button>
+            )}
+            {!inStaff && <MemberMessagesButton />}
             <Button
               variant="ghost"
               size="sm"
@@ -271,7 +305,8 @@ const Index = () => {
             </>
           )}
 
-          {activeTab === "admin" && isAdmin && <AdminTab />}
+          {activeTab === "admin" && isAdmin && inStaff && <AdminTab />}
+          {activeTab === "members" && inStaff && <StaffPanel />}
         </div>
 
         <footer className="mt-12 text-center text-sm text-muted-foreground animate-fade-in-delay-3">

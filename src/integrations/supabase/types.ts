@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      care_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          member_id: string
+          read_at: string | null
+          sender_id: string
+          sender_role: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          member_id: string
+          read_at?: string | null
+          sender_id: string
+          sender_role: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          member_id?: string
+          read_at?: string | null
+          sender_id?: string
+          sender_role?: string
+        }
+        Relationships: []
+      }
       cgm_readings: {
         Row: {
           created_at: string
@@ -877,6 +907,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          last_seen_at: string | null
           onboarding_hidden: boolean
           updated_at: string
           user_id: string
@@ -885,6 +916,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          last_seen_at?: string | null
           onboarding_hidden?: boolean
           updated_at?: string
           user_id: string
@@ -893,6 +925,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          last_seen_at?: string | null
           onboarding_hidden?: boolean
           updated_at?: string
           user_id?: string
@@ -1367,6 +1400,20 @@ export type Database = {
       }
     }
     Functions: {
+      admin_members_overview: {
+        Args: never
+        Returns: {
+          email: string
+          last_meal_at: string
+          last_message_at: string
+          last_reading_at: string
+          last_seen_at: string
+          name: string
+          phone: string
+          unread: number
+          user_id: string
+        }[]
+      }
       admin_rise_text_stats: {
         Args: { _days?: number }
         Returns: {
@@ -1398,9 +1445,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_staff: { Args: { _user_id: string }; Returns: boolean }
+      touch_last_seen: { Args: never; Returns: undefined }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "clinician"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1528,7 +1577,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "clinician"],
     },
   },
 } as const

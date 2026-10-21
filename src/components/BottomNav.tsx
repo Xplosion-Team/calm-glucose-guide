@@ -1,7 +1,7 @@
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type TabId = "journey" | "twin" | "health" | "explore" | "admin";
+export type TabId = "journey" | "twin" | "health" | "explore" | "admin" | "members";
 
 interface TabDef {
   id: TabId;
