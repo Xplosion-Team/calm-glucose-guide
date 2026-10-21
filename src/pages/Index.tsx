@@ -29,6 +29,8 @@ import { CirclesTab } from "@/components/tabs/CirclesTab";
 import { HealthTab } from "@/components/tabs/HealthTab";
 import { AdminTab } from "@/components/tabs/AdminTab";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { StaffPanel } from "@/components/care/StaffPanel";
+import { MemberMessagesButton } from "@/components/care/MemberMessagesButton";
 import { useGlucoseData } from "@/hooks/useGlucoseData";
 import { useSpikeDetection } from "@/hooks/useSpikeDetection";
 import { SpikeBanner } from "@/components/spike/SpikeBanner";
@@ -219,8 +221,15 @@ const Index = () => {
           className="flex items-center justify-between mt-2 mb-4 gap-2 animate-fade-in flex-wrap"
           data-tour="dexcom"
         >
-          <DexcomNightscoutConnect />
-          <div className="flex items-center gap-1">
+          {!inStaff && <DexcomNightscoutConnect />}
+          <div className="flex items-center gap-1 flex-wrap">
+            {isStaff && (
+              <Button variant={inStaff ? "default" : "outline"} size="sm" onClick={toggleStaffMode} className="gap-1">
+                <ShieldCheck className="w-4 h-4" aria-hidden="true" />
+                {inStaff ? "Switch to my app" : "Switch to care team"}
+              </Button>
+            )}
+            {!inStaff && <MemberMessagesButton />}
             <Button
               variant="ghost"
               size="sm"
@@ -296,7 +305,8 @@ const Index = () => {
             </>
           )}
 
-          {activeTab === "admin" && isAdmin && <AdminTab />}
+          {activeTab === "admin" && isAdmin && inStaff && <AdminTab />}
+          {activeTab === "members" && inStaff && <StaffPanel />}
         </div>
 
         <footer className="mt-12 text-center text-sm text-muted-foreground animate-fade-in-delay-3">
