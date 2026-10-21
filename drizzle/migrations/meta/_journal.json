@@ -22,6 +22,13 @@
       "when": 1792182349940,
       "tag": "0002_spike_rise_texts",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792602277812,
+      "tag": "0003_add_clinician_role",
+      "breakpoints": true
     }
   ]
 }
