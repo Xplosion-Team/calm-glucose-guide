@@ -36,6 +36,13 @@
       "when": 1792602301791,
       "tag": "0004_care_team_messaging",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792604009991,
+      "tag": "0005_staff_member_dashboard",
+      "breakpoints": true
     }
   ]
 }

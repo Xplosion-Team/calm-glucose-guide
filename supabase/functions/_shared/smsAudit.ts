@@ -53,10 +53,29 @@ export async function logSmsEvent(event: SmsEvent): Promise<string | null> {
       console.error("sms_events insert failed", error);
       return null;
     }
+    await mirrorToCareChat(event);
     return (data?.id as string) ?? null;
   } catch (e) {
     console.error("sms_events insert threw", e);
     return null;
+  }
+}
+
+// Shows member texts in the care team chat so staff see one timeline.
+// Skipped for staff-authored sends (metadata.skip_mirror) — those already
+// appear in the chat as a staff message.
+async function mirrorToCareChat(event: SmsEvent) {
+  if (!event.userId || event.metadata?.skip_mirror) return;
+  try {
+    const { error } = await auditClient().from("care_messages").insert({
+      member_id: event.userId,
+      sender_id: event.userId,
+      sender_role: event.direction === "inbound" ? "sms_in" : "sms_out",
+      body: event.body ?? "",
+    });
+    if (error) console.error("care_messages mirror failed", error);
+  } catch (e) {
+    console.error("care_messages mirror threw", e);
   }
 }
 
