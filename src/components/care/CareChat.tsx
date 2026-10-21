@@ -3,7 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+
+// sms_in = member's text message, sms_out = text we sent their phone.
+const STAFF_ROLES = ["staff", "sms_out"];
+const smsLabel = (role: string) =>
+  role === "sms_in" ? "Text from member" : role === "sms_out" ? "Text to member" : null;
 
 interface Msg {
   id: string;
@@ -19,14 +25,16 @@ export function CareChat({ memberId, asStaff }: { memberId: string; asStaff: boo
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [alsoText, setAlsoText] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
-  const otherRole = asStaff ? "member" : "staff";
+  const theirRoles = asStaff ? ["member", "sms_in"] : STAFF_ROLES;
 
   useEffect(() => {
     let active = true;
     const markRead = () =>
       supabase.from("care_messages").update({ read_at: new Date().toISOString() })
-        .eq("member_id", memberId).eq("sender_role", otherRole).is("read_at", null);
+        .eq("member_id", memberId).in("sender_role", theirRoles).is("read_at", null);
     supabase.from("care_messages").select("*").eq("member_id", memberId)
       .order("created_at", { ascending: true }).limit(200)
       .then(({ data }) => { if (active) setMsgs((data as Msg[]) ?? []); void markRead(); });
@@ -35,11 +43,11 @@ export function CareChat({ memberId, asStaff }: { memberId: string; asStaff: boo
         { event: "INSERT", schema: "public", table: "care_messages", filter: `member_id=eq.${memberId}` },
         (p) => {
           setMsgs((m) => (m.some((x) => x.id === (p.new as Msg).id) ? m : [...m, p.new as Msg]));
-          if ((p.new as Msg).sender_role === otherRole) void markRead();
+          if (theirRoles.includes((p.new as Msg).sender_role)) void markRead();
         })
       .subscribe();
     return () => { active = false; supabase.removeChannel(ch); };
-  }, [memberId, otherRole]);
+  }, [memberId, asStaff]);
 
   useEffect(() => { bottom.current?.scrollIntoView({ block: "end" }); }, [msgs.length]);
 
@@ -54,6 +62,14 @@ export function CareChat({ memberId, asStaff }: { memberId: string; asStaff: boo
       }).select().single();
       if (data) setMsgs((m) => (m.some((x) => x.id === data.id) ? m : [...m, data as Msg]));
       setText("");
+      if (asStaff && alsoText) {
+        const { data: res, error } = await supabase.functions.invoke("send-care-sms", {
+          body: { memberId, body },
+        });
+        setNotice(error || res?.error ? `Not texted: ${res?.error ?? error?.message}` : "Also sent as a text message.");
+      } else {
+        setNotice(null);
+      }
     }
     setSending(false);
   };
@@ -67,12 +83,16 @@ export function CareChat({ memberId, asStaff }: { memberId: string; asStaff: boo
           </p>
         )}
         {msgs.map((m) => {
-          const mine = (m.sender_role === "staff") === asStaff;
+          const mine = STAFF_ROLES.includes(m.sender_role) === asStaff;
+          const sms = smsLabel(m.sender_role);
           return (
             <div key={m.id} className={cn("flex", mine ? "justify-end" : "justify-start")}>
               <div className={cn("max-w-[80%] rounded-2xl px-4 py-2.5",
-                mine ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground")}>
-                {!mine && <p className="text-xs font-semibold opacity-80 mb-0.5">{m.sender_role === "staff" ? "Care team" : "Member"}</p>}
+                sms ? "border border-dashed border-primary/50 bg-secondary text-secondary-foreground"
+                  : mine ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground")}>
+                {sms
+                  ? <p className="text-xs font-semibold opacity-80 mb-0.5">{sms}</p>
+                  : !mine && <p className="text-xs font-semibold opacity-80 mb-0.5">{m.sender_role === "staff" ? "Care team" : "Member"}</p>}
                 <p className="text-lg whitespace-pre-wrap break-words">{m.body}</p>
                 <p className="text-xs opacity-70 mt-1">
                   {new Date(m.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
@@ -83,6 +103,13 @@ export function CareChat({ memberId, asStaff }: { memberId: string; asStaff: boo
         })}
         <div ref={bottom} />
       </div>
+      {asStaff && (
+        <label className="flex items-center gap-2 pt-2 text-base">
+          <Checkbox checked={alsoText} onCheckedChange={(v) => setAlsoText(v === true)} />
+          Also send to their phone as a text message
+        </label>
+      )}
+      {notice && <p className="text-sm text-muted-foreground pt-1">{notice}</p>}
       <div className="flex gap-2 pt-3 border-t mt-2">
         <Textarea value={text} onChange={(e) => setText(e.target.value)} maxLength={2000}
           placeholder="Type a message…" className="text-lg min-h-[52px]" rows={2}
