@@ -66,7 +66,15 @@ export function CareChat({ memberId, asStaff }: { memberId: string; asStaff: boo
         const { data: res, error } = await supabase.functions.invoke("send-care-sms", {
           body: { memberId, body },
         });
-        setNotice(error || res?.error ? `Not texted: ${res?.error ?? error?.message}` : "Also sent as a text message.");
+        let reason: string | null = res?.error ?? null;
+        if (error) {
+          try {
+            const ctx = (error as { context?: Response }).context;
+            const parsed = ctx ? await ctx.json() : null;
+            reason = typeof parsed?.error === "string" ? parsed.error : "the text could not be sent";
+          } catch { reason = "the text could not be sent"; }
+        }
+        setNotice(reason ? `Not texted: ${reason}` : "Also sent as a text message.");
       } else {
         setNotice(null);
       }
