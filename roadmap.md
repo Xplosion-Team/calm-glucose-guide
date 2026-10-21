@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Protect meal logging during coach text conversations and add named meal commands.
+
 - [x] Process photo texts with the in-app meal analyzer, keeping YES/NO review and separate drafts.
 - [ ] Verify a real photo from Kehlin's linked number; blocked until a meal photo arrives at 833-700-8650.
 - [x] Text members when blood sugar rises with no meal logged (real-time + evening summary)
