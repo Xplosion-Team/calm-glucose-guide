@@ -28,7 +28,7 @@ export function MemberDashboard({ memberId }: { memberId: string }) {
     supabase.rpc("admin_member_dashboard", { _member: memberId }).then(({ data, error: err }) => {
       if (!active) return;
       if (err) setError("Couldn't load this member's dashboard.");
-      else setD(data as Dashboard);
+      else setD(data as unknown as Dashboard);
     });
     return () => { active = false; };
   }, [memberId]);
