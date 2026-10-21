@@ -5,6 +5,13 @@ import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 Deno.test("webhook mirrors a coach YES without saving or discarding a waiting meal", async () => {
   const originalFetch = globalThis.fetch;
   const originalServe = Deno.serve;
+  const originalSetInterval = globalThis.setInterval;
+  const intervals: number[] = [];
+  globalThis.setInterval = ((...args: Parameters<typeof setInterval>) => {
+    const id = originalSetInterval(...args);
+    intervals.push(id);
+    return id;
+  }) as typeof setInterval;
   const envNames = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"];
   const previous = envNames.map((name) => Deno.env.get(name));
   let handler: ((req: Request) => Promise<Response>) | undefined;
@@ -55,6 +62,8 @@ Deno.test("webhook mirrors a coach YES without saving or discarding a waiting me
   } finally {
     globalThis.fetch = originalFetch;
     Deno.serve = originalServe;
+    intervals.forEach((id) => clearInterval(id));
+    globalThis.setInterval = originalSetInterval;
     envNames.forEach((name, index) => {
       const value = previous[index];
       if (value === undefined) Deno.env.delete(name);
