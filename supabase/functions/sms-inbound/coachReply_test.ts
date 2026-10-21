@@ -15,7 +15,7 @@ Deno.test("coach replies cannot confirm or discard an older waiting meal", () =>
 
 Deno.test("coach protection lasts 30 minutes", () => {
   assertEquals(COACH_REPLY_WINDOW_MS, 30 * 60 * 1000);
-  assertEquals(routeCoachReply("ok", { ...context, coachSentAt: now - COACH_REPLY_WINDOW_MS + 1 }), "coach");
+  assertEquals(routeCoachReply("ok", { ...context, coachSentAt: now - COACH_REPLY_WINDOW_MS + 1, mealQuestionAt: now - COACH_REPLY_WINDOW_MS - 1 }), "coach");
   assertEquals(routeCoachReply("ok", { ...context, coachSentAt: now - COACH_REPLY_WINDOW_MS }), "logger");
 });
 

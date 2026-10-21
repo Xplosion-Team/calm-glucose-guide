@@ -84,7 +84,7 @@ export function confirmPrompt(label: string, carbs: number | null, portion: stri
   const details = [carbs ? `~${carbs}g carbs` : null, portion ? `${portion} portion` : null]
     .filter(Boolean)
     .join(", ");
-  return `Mr. Calm — Got it: ${label}${details ? ` (${details})` : ""}.\nReply YES or "Mr. Calm, save this meal" to save, NO to discard, or EDIT followed by a correction. A separate food text adds another meal.`;
+  return `Mr. Calm — Got it: ${label}${details ? ` (${details})` : ""}.\nReply YES to save, NO to discard, or EDIT followed by a correction. You can also say "Mr. Calm, save this meal". A separate food text adds another meal.`;
 }
 
 // Warm confirmation sent back after the entry is written to the journal.
