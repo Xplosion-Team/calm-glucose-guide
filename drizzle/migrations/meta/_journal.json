@@ -29,6 +29,13 @@
       "when": 1792602277812,
       "tag": "0003_add_clinician_role",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792602301791,
+      "tag": "0004_care_team_messaging",
+      "breakpoints": true
     }
   ]
 }
