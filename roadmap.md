@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Protect meal logging during coach text conversations and add named meal commands.
+- [x] Protect meal logging during coach text conversations and add named meal commands (30 tests pass; carrier-originated conversation check still unverified).
 
 - [x] Process photo texts with the in-app meal analyzer, keeping YES/NO review and separate drafts.
 - [ ] Verify a real photo from Kehlin's linked number; blocked until a meal photo arrives at 833-700-8650.
