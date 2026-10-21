@@ -4,7 +4,7 @@
 //      note on that meal and the reminder is closed out.
 //   2. Otherwise the text is treated as a new food/drink entry: analyze-food
 //      estimates the label, carbs and portion, and a food_log row is inserted.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logSmsEvent, updateSmsEvent } from "../_shared/smsAudit.ts";
 import { isNoMealReply, matchTimedReply } from "../_shared/riseDetect.ts";
 import { downloadPhoto, parsePhotos, photoReplyIntent, verifyTwilioSignature, type MealPhoto } from "./media.ts";
@@ -12,6 +12,8 @@ import {
   classify,
   confirmPrompt,
   interpretReply,
+  mealCommand,
+  routeCoachReply,
   phoneVariants,
   savedReplyText,
   readingsLinkText,
@@ -43,7 +45,7 @@ function reply(message: string) {
 
 
 async function analyzeEntry(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   text: string,
   type: "food" | "drink" | "medication",
   photos: MealPhoto[] = [],
@@ -84,7 +86,7 @@ async function analyzeEntry(
 
 // Warm confirmation sent back after the entry is written to the journal.
 async function savedReply(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   userId: string,
   entry: { type: string; label: string; carbs_grams: number | null; portion_size: string | null },
 ) {
@@ -224,7 +226,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const intent = photoReplyIntent(body, attachments.length > 0);
+    const command = mealCommand(body);
+    const intent = photoReplyIntent(command.text, attachments.length > 0);
 
     if (intent === "readings") {
       return await respondAndLog(audit, readingsLinkText(), { purpose: "readings-link", outcome: "Sent app link" });
@@ -282,9 +285,36 @@ Deno.serve(async (req) => {
     const tz = (eng as any)?.timezone || "America/Chicago";
     const now = new Date();
 
+    // Only successfully sent coach texts open the protected conversation.
+    // Audit lookup errors fail closed: ambiguous replies must not mutate meals.
+    const { data: outbound, error: contextError } = await supabase.from("sms_events")
+      .select("purpose, related_table, created_at")
+      .eq("user_id", userId).eq("direction", "outbound").eq("status", "sent")
+      .gte("created_at", new Date(now.getTime() - 30 * 60000).toISOString())
+      .order("created_at", { ascending: false }).limit(200);
+    const coachText = outbound?.find((event) => event.purpose === "care_chat");
+    const mealQuestion = outbound?.find((event) =>
+      event.related_table === "sms_pending_logs" || event.related_table === "spike_events" ||
+      (event.purpose === "reply: confirmation" && pending));
+    const timeReply = Boolean(pending && !photos.length && isTimeReply(command.text, now, tz));
+    if (routeCoachReply(body, {
+      now: now.getTime(), coachSentAt: coachText ? Date.parse(coachText.created_at) : null,
+      mealQuestionAt: mealQuestion ? Date.parse(mealQuestion.created_at) : null,
+      hasPending: Boolean(pending), hasPhoto: photos.length > 0, isPendingTimeReply: timeReply,
+      lookupFailed: Boolean(contextError),
+    }) === "coach") {
+      // logSmsEvent already mirrored this inbound text. No automated reply is
+      // sent, and no pending meal, rise or check-in is changed.
+      await updateSmsEvent(inboundId, { purpose: "care_chat reply", outcome: "Delivered to care team chat only; meals unchanged" });
+      return new Response('<?xml version="1.0" encoding="UTF-8"?><Response/>', {
+        headers: { ...corsHeaders, "Content-Type": "text/xml" },
+      });
+    }
+
     // A time-only reply ("1pm", "2 hours ago") sets when the oldest waiting meal was eaten.
-    if (pending && !photos.length && isTimeReply(body, now, tz)) {
-      const at = parseEatenTime(body, now, tz)!;
+    const statedReplyTime = timeReply ? parseEatenTime(command.text, now, tz) : null;
+    if (pending && statedReplyTime) {
+      const at = statedReplyTime;
       await supabase.from("sms_pending_logs").update({ eaten_at: at.toISOString(), eaten_at_source: "stated" }).eq("id", pending.id);
       return await respondAndLog(audit,
         `${confirmPrompt(pending.label, pending.carbs_grams, pending.portion_size)}\n${eatenLine({ at, source: "stated" }, tz)}`,
@@ -293,7 +323,7 @@ Deno.serve(async (req) => {
 
     // Replies to a "your glucose rose — did you eat?" text.
     let riseMatch: { id: string; start: number } | null = null;
-    let entryText = body;
+    let entryText = command.text;
     if (!pending) {
       const { data: sentRises } = await supabase.from("spike_events")
         .select("id, rise_start_at, sms_sent_at").eq("user_id", userId).eq("kind", "unlogged").eq("status", "sent")
@@ -359,7 +389,7 @@ Deno.serve(async (req) => {
       }
 
       // Only an explicit correction edits the oldest waiting meal.
-      const correction = body.replace(/^(edit|correction|correct to|actually|instead|it was|make that|change to)\b[:\s]*/i, "").trim();
+      const correction = command.text.replace(/^(edit|correction|correct to|actually|instead|it was|make that|change to)\b[:\s]*/i, "").trim();
       if (!correction) return await respondAndLog(audit, "Text EDIT followed by the corrected meal details.", {
         purpose: "correction", outcome: "Correction details needed",
       });

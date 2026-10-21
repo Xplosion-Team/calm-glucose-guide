@@ -26,7 +26,8 @@ export const readingsLinkText = () => `Here are your latest readings and meals: 
 export type ReplyIntent = "readings" | "stop" | "confirm" | "discard" | "correction" | "new_entry" | "checkin";
 
 export function interpretReply(body: string): ReplyIntent {
-  const text = body.trim();
+  const text = mealCommand(body).text;
+  if (mealCommand(body).confirm) return "confirm";
   if (/^(stop|unsubscribe|cancel)$/i.test(text)) return "stop";
   if (/^(link|readings?|my readings|app|glucose|numbers?)[.!?]?$/i.test(text)) return "readings";
   if (/^(yes|y|yeah|yep|ok|okay|correct|confirm|save)(\s+please)?[.!]?$/i.test(text)) return "confirm";
@@ -36,12 +37,54 @@ export function interpretReply(body: string): ReplyIntent {
   return "new_entry";
 }
 
+// Names are aliases, not people or a replacement for the care team.
+export function mealCommand(body: string): { text: string; addressed: boolean; confirm: boolean } {
+  const name = /^(?:hey\s+)?(?:mr\.?\s*calm|calm\s*sugar|calm\s*glucose)\b[,:\s-]*/i;
+  const addressed = name.test(body.trim());
+  const text = body.trim().replace(name, "").trim();
+  const confirm = /^(?:please\s+)?save\s+(?:this|the|my)\s+meal(?:\s+please)?[.!]?$/i.test(text);
+  const details = text.replace(/^(?:please\s+)?(?:save|log)\s+(?:(?:this|the|my)\s+meal\s*[:,-]?\s*|meal\s*[:,-]?\s*)/i, "").trim();
+  return { text: confirm ? text : details, addressed, confirm };
+}
+
+export const COACH_REPLY_WINDOW_MS = 30 * 60 * 1000;
+export interface CoachReplyContext {
+  now: number;
+  coachSentAt: number | null;
+  mealQuestionAt: number | null;
+  hasPending: boolean;
+  hasPhoto: boolean;
+  isPendingTimeReply?: boolean;
+  lookupFailed?: boolean;
+}
+
+// Conservative food recognition: uncertain conversational replies stay with
+// the coach. Members can explicitly address the logger for unusual foods.
+export function clearlyDescribesMeal(text: string): boolean {
+  if (/\b(?:salmon|potatoes?|macaroni|macaronni|rice|chicken|sandwich|toast|oatmeal|berries|eggs?|salad|pasta|pizza|beans|bread|apple|banana|donuts?|yogurt|cereal|soup|beef|turkey|fish|tacos?|cheese|nuts|broccoli|corn|coffee|tea|soda|juice|smoothie|milk|latte|shake|protein drink)\b/i.test(text)) return true;
+  return /^(?:i\s+)?(?:ate|eaten|drank|for breakfast|for lunch|for dinner)\s+\S/i.test(text);
+}
+
+export function routeCoachReply(body: string, context: CoachReplyContext): "logger" | "coach" {
+  const command = mealCommand(body);
+  const active = context.lookupFailed || (context.coachSentAt !== null &&
+    context.now >= context.coachSentAt && context.now - context.coachSentAt < COACH_REPLY_WINDOW_MS);
+  const intent = interpretReply(body);
+  if (!active || intent === "stop" || intent === "readings" || command.confirm || command.addressed || context.hasPhoto) return "logger";
+  const mealOwnsReply = !context.lookupFailed && context.mealQuestionAt !== null && context.coachSentAt !== null &&
+    context.mealQuestionAt > context.coachSentAt && context.now - context.mealQuestionAt < COACH_REPLY_WINDOW_MS;
+  if (mealOwnsReply && ((context.hasPending && (intent === "confirm" || intent === "discard" || intent === "correction" || context.isPendingTimeReply)) ||
+    (!context.hasPending && /^(?:no|nothing|didn't eat|did not eat)[.!]?$/i.test(body.trim())))) return "logger";
+  if (intent === "new_entry" && clearlyDescribesMeal(command.text)) return "logger";
+  return "coach";
+}
+
 // Ask the person to check the entry before anything is written to their journal.
 export function confirmPrompt(label: string, carbs: number | null, portion: string | null) {
   const details = [carbs ? `~${carbs}g carbs` : null, portion ? `${portion} portion` : null]
     .filter(Boolean)
     .join(", ");
-  return `Got it: ${label}${details ? ` (${details})` : ""}.\nReply YES to save, NO to discard, or EDIT followed by a correction. A separate food text adds another meal.`;
+  return `Mr. Calm — Got it: ${label}${details ? ` (${details})` : ""}.\nReply YES to save, NO to discard, or EDIT followed by a correction. You can also say "Mr. Calm, save this meal". A separate food text adds another meal.`;
 }
 
 // Warm confirmation sent back after the entry is written to the journal.
